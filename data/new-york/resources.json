@@ -1,0 +1,85 @@
+{
+  "food": [
+    {
+      "id": "nyc-soup-kitchen-001",
+      "name": "Bowery Mission Soup Kitchen",
+      "address": "227 Bowery, New York, NY 10002",
+      "lat": "40.7150",
+      "lng": "-73.9920",
+      "hours": "Mon-Fri 11:30 AM - 1:30 PM",
+      "daysOpen": "Mon, Tue, Wed, Thu, Fri",
+      "phone": "(212) 674-3456",
+      "requiresId": false,
+      "walkIn": true,
+      "notes": "Breakfast and lunch service; accessible entrance on the side street."
+    },
+    {
+      "id": "harlem-food-bank-002",
+      "name": "Harlem Food Bank",
+      "address": "125 W 125th St, New York, NY 10027",
+      "lat": "40.8075",
+      "lng": "-73.9450",
+      "hours": "Wed 10:00 AM - 2:00 PM",
+      "daysOpen": "Wed",
+      "phone": "(212) 555-0143",
+      "requiresId": true,
+      "walkIn": false,
+      "notes": "Bring proof of residence; appointment recommended."
+    },
+    {
+      "id": "brooklyn-pantry-003",
+      "name": "Brooklyn Community Pantry",
+      "address": "425 Atlantic Ave, Brooklyn, NY 11217",
+      "lat": "40.6895",
+      "lng": "-73.9800",
+      "hours": "Sat 9:00 AM - 12:00 PM",
+      "daysOpen": "Sat",
+      "phone": "(718) 555-0199",
+      "requiresId": false,
+      "walkIn": true,
+      "notes": "Produce boxes while supplies last."
+    },
+    {
+      "id": "queens-outreach-004",
+      "name": "Queens Outreach Meals",
+      "address": "37-18 30th St, Astoria, NY 11103",
+      "lat": "40.7625",
+      "lng": "-73.9190",
+      "hours": "Tue & Thu 12:00 PM - 2:00 PM",
+      "daysOpen": "Tue, Thu",
+      "phone": "(718) 555-0120",
+      "requiresId": false,
+      "walkIn": true,
+      "notes": "Hot meals served; limited seating."
+    },
+    {
+      "id": "bronx-kitchen-005",
+      "name": "Bronx Community Kitchen",
+      "address": "149th St & Grand Concourse, Bronx, NY 10451",
+      "lat": "40.8160",
+      "lng": "-73.9236",
+      "hours": "Mon, Wed, Fri 1:00 PM - 3:00 PM",
+      "daysOpen": "Mon, Wed, Fri",
+      "phone": "(718) 555-0177",
+      "requiresId": true,
+      "walkIn": false,
+      "notes": "Clients must register on site; limited documentation accepted."
+    },
+    {
+      "id": "staten-island-outreach-006",
+      "name": "Staten Island Outreach",
+      "address": "99 Richmond Terrace, Staten Island, NY 10301",
+      "lat": "40.6437",
+      "lng": "-74.0733",
+      "hours": "Sun 10:30 AM - 1:00 PM",
+      "daysOpen": "Sun",
+      "phone": "(718) 555-0166",
+      "requiresId": false,
+      "walkIn": true,
+      "notes": "Family-friendly service; diapers and infant formula available occasionally."
+    }
+  ],
+  "shelter": [],
+  "housing": [],
+  "legal": []
+}

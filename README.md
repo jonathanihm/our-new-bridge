@@ -1,8 +1,9 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a Next.js project bootstrapped with `create-next-app`.
 
-## Getting Started
+Getting started
+---------------
 
-First, run the development server:
+Run the dev server:
 
 ```bash
 npm run dev
@@ -10,27 +11,121 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Overview
+--------
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This repo is organized to make it easy to add new cities and their location data. Key paths:
 
-## Learn More
+- `config/cities/<city>.json` — per-city configuration (name, slug, map settings)
+- `data/<city>/resources.json` — per-city resources (food locations)
+- `src/app/[city]/food/page.tsx` — server page that loads city data and renders `FoodPageClient`
+- `src/app/[city]/food/FoodPageClient.tsx` — client UI wrapper (loads map component dynamically)
+- `components/FoodMap.tsx` — Google Maps implementation
+- `components/FoodMapLeaflet.tsx` — Leaflet/OpenStreetMap implementation
 
-To learn more about Next.js, take a look at the following resources:
+Adding a new city
+-----------------
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Create a config file at `config/cities/<city>.json` with at least:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```json
+{
+  "name": "Des Moines",
+  "slug": "des-moines",
+  "map": {
+    "centerLat": 41.5868,
+    "centerLng": -93.6250,
+    "defaultZoom": 12,
+    "googleApiKey": "YOUR_GOOGLE_KEY"
+  }
+}
+```
 
-## Deploy on Vercel
+2. Add resources at `data/<city>/resources.json` using this shape:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```json
+{
+  "food": [
+    {
+      "id": "unique-id",
+      "name": "Site name",
+      "address": "123 Main St",
+      "lat": "41.5868",
+      "lng": "-93.6250",
+      "hours": "10:00 AM - 2:00 PM",
+      "daysOpen": "Mon, Wed, Fri",
+      "phone": "(555) 555-5555",
+      "requiresId": false,
+      "walkIn": true,
+      "notes": "Additional notes"
+    }
+  ]
+}
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Visit `/<city>/food` (for example `/des-moines/food`). The server page will read the config and resources files and pass them to the client wrapper.
+
+Fields & features
+------------------
+
+- `requiresId` (boolean): toggles badge color and label.
+- `walkIn` (boolean): shows a "Walk-ins Welcome" badge.
+- `hours`, `daysOpen`, `phone`, `notes`: optional display fields in resource card.
+
+Map component options
+---------------------
+
+Two map implementations are provided:
+
+- Google Maps: `components/FoodMap.tsx` — uses `@react-google-maps/api`. Do not commit API keys to config files; instead set an environment variable.
+- Leaflet: `components/FoodMapLeaflet.tsx` — uses `react-leaflet` and OpenStreetMap tiles; works without an API key.
+
+To change which map is used, open `src/app/[city]/food/FoodPageClient.tsx` and update the dynamic import. Example to use Leaflet:
+
+```ts
+const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet'
+const MapComponent = dynamic<any>(() => import(leafletFoodMapComponent).then(m => m.default), { ssr: false })
+```
+
+Customizing Leaflet markers
+---------------------------
+
+The Leaflet component currently uses `CircleMarker`. To use map-style markers like Google:
+
+1. Import `Marker` from `react-leaflet` and `L` from `leaflet`.
+2. Create an `L.icon` using an SVG data URI or the default marker images.
+3. Replace `CircleMarker` with `Marker` and pass the `icon` prop. See `components/FoodMapLeaflet.tsx` for implementation notes.
+
+Dependencies
+------------
+
+If you use the Leaflet implementation, install:
+
+```bash
+npm install react-leaflet leaflet
+```
+
+If you use Google Maps implementation, ensure `@react-google-maps/api` is installed and `map.googleApiKey` is set.
+
+Scaffolding suggestion
+----------------------
+#TODO - create scripts to scaffold cities
+
+Add a small script `scripts/add-city.ts` that copies a config template and sample resources into `config/cities/<city>.json` and `data/<city>/resources.json`. Also consider exposing `DEFAULT_CITY` env var for fallback redirects.
+
+Environment variables (recommended)
+---------------------------------
+
+Create a `.env.local` in the project root and add your Google Maps key (exposed to client builds with `NEXT_PUBLIC_` prefix):
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+```
+
+The server loader in `src/app/[city]/food/page.tsx` will automatically use the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (or `GOOGLE_MAPS_API_KEY` if you prefer a server-only variable) and inject it into the `cityConfig` passed to the client.
+
+Want me to implement the loader and scaffold script next? I can add `src/lib/cities.ts` to centralize loading/validation and a `scripts/add-city.ts` helper.

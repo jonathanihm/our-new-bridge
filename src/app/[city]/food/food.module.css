@@ -1,0 +1,312 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.header h1 {
+  flex: 1;
+  font-size: 1.5rem;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+  text-decoration: none;
+}
+
+.backButton:hover {
+  opacity: 0.8;
+}
+
+.resourceCount {
+  background: rgba(255,255,255,0.15);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.mapContainer {
+  height: 420px; /* ensure explicit height */
+  width: 100%;
+  background: transparent; /* remove tan background */
+  position: relative;
+}
+
+.mapPlaceholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, #c8d5b9 0%, #a3b18a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: var(--primary);
+}
+
+.cardOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+  z-index: 10000;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.resourceCard {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: slideUp 0.3s ease;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.closeCard {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: var(--surface);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--primary);
+  transition: all 0.2s;
+}
+
+.closeCard:hover {
+  background: var(--border);
+}
+
+.resourceCard h2 {
+  font-size: 1.75rem;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+  padding-right: 2rem;
+}
+
+.cardSection {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  color: var(--text);
+  align-items: flex-start;
+}
+
+.cardSection svg {
+  flex-shrink: 0;
+  color: var(--secondary);
+  margin-top: 2px;
+}
+
+.cardSection strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.cardSection a {
+  color: var(--primary);
+}
+
+.daysOpen {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
+}
+
+.requirements {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+
+.badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.badgeGreen {
+  background: var(--success);
+  color: var(--success-text);
+}
+
+.badgeYellow {
+  background: var(--warning);
+  color: var(--warning-text);
+}
+
+.notes {
+  background: #f8f6f1;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #444;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.notes svg {
+  flex-shrink: 0;
+  color: var(--secondary);
+}
+
+.directionsButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  transition: all 0.2s;
+}
+
+.directionsButton:hover {
+  background: #344e41;
+}
+
+.resourceList {
+  background: white;
+  border-top: 2px solid var(--border);
+  padding: 1.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.resourceList h3 {
+  font-size: 1.25rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.listItem {
+  padding: 1rem;
+  border-bottom: 1px solid var(--surface);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.listItem:hover {
+  background: var(--background);
+}
+
+.listItemSelected {
+  background: var(--surface);
+  border-left: 3px solid var(--primary);
+  padding-left: calc(1rem - 3px);
+}
+
+.listItemHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary);
+}
+
+.listItemHeader svg {
+  flex-shrink: 0;
+}
+
+.listItemHours {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.badgeSmall {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  margin-left: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .resourceCard {
+    padding: 1.5rem;
+    margin: 0.5rem;
+  }
+  .resourceCard h2 {
+    font-size: 1.5rem;
+  }
+  .header h1 {
+    font-size: 1.25rem;
+  }
+  .resourceList {
+    max-height: 250px;
+  }
+  .mapContainer {
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 0.75rem 1rem;
+  }
+  .resourceCount {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+  .mapContainer {
+    min-height: 350px;
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "slug": "new-york",
+  "city": {
+    "name": "New York",
+    "state": "New York",
+    "fullName": "New York Metro",
+    "tagline": "Find help. Fast.",
+    "description": "A simple, humane platform for finding essential resources"
+  },
+  "map": {
+    "centerLat": 40.7128,
+    "centerLng": -74.006,
+    "defaultZoom": 12
+  },
+  "features": {
+    "food": {
+      "enabled": true,
+      "title": "Find Free Food",
+      "icon": "🍽️"
+    },
+    "shelter": {
+      "enabled": false,
+      "title": "Find Shelter",
+      "icon": "🏠"
+    },
+    "housing": {
+      "enabled": false,
+      "title": "Housing Help",
+      "icon": "🏘️"
+    },
+    "legal": {
+      "enabled": false,
+      "title": "Legal Help",
+      "icon": "⚖️"
+    }
+  },
+  "contact": {
+    "email": "hello@ournewbridge.org",
+    "volunteer": true
+  },
+  "branding": {
+    "primaryColor": "#3a5a40",
+    "secondaryColor": "#588157",
+    "accentColor": "#a3b18a",
+    "backgroundColor": "#fdfbf7"
+  }
+}
