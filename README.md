@@ -1,4 +1,6 @@
-This is a Next.js project bootstrapped with `create-next-app`.
+This is an open source project to allow for quickly create new help networks in any area you choose.
+
+Our New Bridge can easily be run and managed as a standalone project for you, or you can create a new city/area for the main project and simply add the data.
 
 Getting started
 ---------------
@@ -65,6 +67,8 @@ Adding a new city
     }
   ]
 }
+
+You can have ChatGPT manually create these with you or create a small application to help you with this.
 ```
 
 3. Visit `/<city>/food` (for example `/des-moines/food`). The server page will read the config and resources files and pass them to the client wrapper.
@@ -91,25 +95,6 @@ const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet'
 const MapComponent = dynamic<any>(() => import(leafletFoodMapComponent).then(m => m.default), { ssr: false })
 ```
 
-Customizing Leaflet markers
----------------------------
-
-The Leaflet component currently uses `CircleMarker`. To use map-style markers like Google:
-
-1. Import `Marker` from `react-leaflet` and `L` from `leaflet`.
-2. Create an `L.icon` using an SVG data URI or the default marker images.
-3. Replace `CircleMarker` with `Marker` and pass the `icon` prop. See `components/FoodMapLeaflet.tsx` for implementation notes.
-
-Dependencies
-------------
-
-If you use the Leaflet implementation, install:
-
-```bash
-npm install react-leaflet leaflet
-```
-
-If you use Google Maps implementation, ensure `@react-google-maps/api` is installed and `map.googleApiKey` is set.
 
 Scaffolding suggestion
 ----------------------
@@ -120,12 +105,8 @@ Add a small script `scripts/add-city.ts` that copies a config template and sampl
 Environment variables (recommended)
 ---------------------------------
 
-Create a `.env.local` in the project root and add your Google Maps key (exposed to client builds with `NEXT_PUBLIC_` prefix):
+Update `.env.local` in the project root and add your Google Maps key
 
-```bash
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-```
+The server loader in `src/app/[city]/food/page.tsx` will automatically use the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
-The server loader in `src/app/[city]/food/page.tsx` will automatically use the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (or `GOOGLE_MAPS_API_KEY` if you prefer a server-only variable) and inject it into the `cityConfig` passed to the client.
-
-Want me to implement the loader and scaffold script next? I can add `src/lib/cities.ts` to centralize loading/validation and a `scripts/add-city.ts` helper.
+If you are going to use GitHub, please create a secret with the same secret name
