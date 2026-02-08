@@ -9,13 +9,52 @@ export type ResourceType = 'food' | 'shelter' | 'housing' | 'legal'
 
 const RESOURCE_TYPES: ResourceType[] = ['food', 'shelter', 'housing', 'legal']
 
-// Check if we have a valid DATABASE_URL (must start with postgresql:// or postgres://)
-const isValidDatabaseUrl = () => {
-  const url = process.env.DATABASE_URL
-  return url && (url.startsWith('postgresql://') || url.startsWith('postgres://'))
+function getDatabaseUrlCandidate() {
+  // Common names across hosts:
+  // - Supabase/Neon/etc typically use DATABASE_URL
+  // - Vercel Postgres often provides POSTGRES_PRISMA_URL / POSTGRES_URL
+  const raw =
+    process.env.DATABASE_URL ??
+    process.env.POSTGRES_PRISMA_URL ??
+    process.env.POSTGRES_URL
+
+  if (!raw) return undefined
+  const trimmed = raw.trim()
+  return trimmed.length ? trimmed : undefined
 }
 
-export const USE_DATABASE = isValidDatabaseUrl()
+// Check if we have a valid Postgres URL (postgresql:// or postgres://)
+const isValidDatabaseUrl = (url: string | undefined) => {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'postgresql:' || parsed.protocol === 'postgres:'
+  } catch {
+    return false
+  }
+}
+
+const resolvedDatabaseUrl = getDatabaseUrlCandidate()
+export const USE_DATABASE = isValidDatabaseUrl(resolvedDatabaseUrl)
+
+// Ensure Prisma reads the resolved DB URL even if the host uses a different env var name.
+if (USE_DATABASE && resolvedDatabaseUrl && process.env.DATABASE_URL !== resolvedDatabaseUrl) {
+  process.env.DATABASE_URL = resolvedDatabaseUrl
+}
+
+function isReadOnlyFilesystemError(error: unknown) {
+  if (!error || typeof error !== 'object') return false
+  const code = (error as { code?: unknown }).code
+  return code === 'EROFS' || code === 'EPERM' || code === 'EACCES'
+}
+
+function jsonWriteNotSupportedMessage() {
+  return (
+    'This deployment is running in file-based (JSON) mode, but the filesystem is read-only. '
+    + 'Hosts like Vercel do not allow writing to project files at runtime. '
+    + 'To create/edit cities and resources in production, set DATABASE_URL (or Vercel\'s POSTGRES_PRISMA_URL) to enable database mode.'
+  )
+}
 
 let prisma: PrismaClient | null = null
 
@@ -143,7 +182,14 @@ export async function createCity(data: {
       },
       map: { centerLat: data.centerLat, centerLng: data.centerLng, defaultZoom: 12 },
     }
-    await writeFile(join(CONFIG_DIR, `${data.slug}.json`), JSON.stringify(config, null, 2))
+    try {
+      await writeFile(join(CONFIG_DIR, `${data.slug}.json`), JSON.stringify(config, null, 2))
+    } catch (error) {
+      if (isReadOnlyFilesystemError(error)) {
+        throw new Error(jsonWriteNotSupportedMessage())
+      }
+      throw error
+    }
     return data
   }
 }
@@ -379,7 +425,14 @@ export async function upsertResource(
       resources[category].push({ ...data, category: undefined })
     }
 
-    await writeFile(resourcePath, JSON.stringify(resources, null, 2))
+    try {
+      await writeFile(resourcePath, JSON.stringify(resources, null, 2))
+    } catch (error) {
+      if (isReadOnlyFilesystemError(error)) {
+        throw new Error(jsonWriteNotSupportedMessage())
+      }
+      throw error
+    }
     return data
   }
 }
