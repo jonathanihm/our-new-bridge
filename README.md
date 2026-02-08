@@ -1,4 +1,4 @@
-This is an open source project to allow for quickly create new help networks in any area you choose.
+This is an open source project to allow for quickly creating new help networks in any area you choose.
 
 Our New Bridge can easily be run and managed as a standalone project for you, or you can create a new city/area for the main project and simply add the data.
 
