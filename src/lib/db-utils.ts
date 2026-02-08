@@ -166,12 +166,23 @@ export async function validateConfig() {
       if (!city.centerLat) issues.push('Missing centerLat')
       if (!city.centerLng) issues.push('Missing centerLng')
 
-      city.resources.forEach((r, idx) => {
+      city.resources.forEach(
+        (
+          r: {
+            externalId?: string
+            name?: string
+            address?: string
+            lat?: number | null
+            lng?: number | null
+          },
+          idx: number
+        ) => {
         if (!r.externalId) resourceIssues.push(`Resource ${idx}: missing id`)
         if (!r.name) resourceIssues.push(`Resource ${idx}: missing name`)
         if (!r.address) resourceIssues.push(`Resource ${idx}: missing address`)
         if (!r.lat || !r.lng) resourceIssues.push(`Resource ${idx}: missing coordinates`)
-      })
+        }
+      )
 
       results.push({
         city: city.name,

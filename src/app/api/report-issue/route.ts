@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { config } from 'process';
-import { Resend } from 'resend';
+import { Resend } from 'resend'
+
+export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,15 +38,18 @@ export async function POST(request: NextRequest) {
 
     console.log('Report received:', reportData)
 
-    const envKey = process.env.RESEND_API_KEY;
-    const resend = new Resend(envKey);
-
-    resend.emails.send({
+    const envKey = process.env.RESEND_API_KEY
+    if (envKey) {
+      const resend = new Resend(envKey)
+      await resend.emails.send({
         from: 'onboarding@resend.dev',
         to: process.env.ADMIN_EMAIL || 'admin@ournewbridge.org',
-        subject: 'Hello World',
-        html: reportData.description
-    });
+        subject: `Resource Report: ${issueType}${resourceName ? ` - ${resourceName}` : ''}`,
+        html: formatReportEmail(reportData),
+      })
+    } else {
+      console.warn('RESEND_API_KEY is not set; skipping email send')
+    }
     // OPTION 1: Send email notification
     // Uncomment and configure when ready to use
     /*

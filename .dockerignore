@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+coverage
+build
+.git
+.github
+.vscode
+*.log
+.env*
+Dockerfile
+compose.yml
