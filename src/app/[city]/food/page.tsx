@@ -1,4 +1,4 @@
-import { getCityBySlug } from '@/lib/db-utils'
+import { getCityBySlug, getCities } from '@/lib/db-utils'
 import { redirect } from 'next/navigation'
 import FoodPageClient from './FoodPageClient'
 
@@ -11,6 +11,8 @@ export default async function Page({ params }: { params: any }) {
   if (!cityData) {
     throw new Error(`City not found: ${city}`)
   }
+
+  const cities = await getCities()
 
   // Transform to match the existing page props
   const cityConfig = {
@@ -53,6 +55,7 @@ export default async function Page({ params }: { params: any }) {
       cityConfig={cityConfig}
       resources={resources}
       slug={city}
+      cities={(cities || []).map((c: any) => ({ slug: c.slug, name: c.name }))}
       resourceType="food"
       pageTitle="Find Free Food"
       listTitle="All Food Resources"

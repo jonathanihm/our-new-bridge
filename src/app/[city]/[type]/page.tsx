@@ -1,4 +1,4 @@
-import { getCityBySlug, getResourcesByCityAndType, type ResourceType } from '@/lib/db-utils'
+import { getCityBySlug, getCities, getResourcesByCityAndType, type ResourceType } from '@/lib/db-utils'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { redirect } from 'next/navigation'
@@ -56,6 +56,8 @@ export default async function Page({ params }: { params: any }) {
     throw new Error(`City not found: ${city}`)
   }
 
+  const cities = await getCities()
+
   const titles = {
     ...defaultTitles(requestedType),
     pageTitle: feature?.title || defaultTitles(requestedType).pageTitle,
@@ -103,6 +105,7 @@ export default async function Page({ params }: { params: any }) {
       cityConfig={cityConfig}
       resources={resources}
       slug={city}
+      cities={(cities || []).map((c: any) => ({ slug: c.slug, name: c.name }))}
       resourceType={requestedType}
       pageTitle={titles.pageTitle}
       listTitle={titles.listTitle}

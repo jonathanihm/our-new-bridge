@@ -3,8 +3,9 @@
 // Client wrapper: render the full food page UI using server-provided props
 import { useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Clock, Phone, Info, Navigation, X, ArrowLeft } from 'lucide-react'
+import { MapPin, Clock, Phone, Info, Navigation, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import styles from './food.module.css'
 import type { MapResource, ResourceType } from '../../../../types'
 import ReportIssueButton from '@/components/ReportIssueButton/ReportIssueButton'
@@ -21,8 +22,27 @@ const MapComponent = dynamic<any>(
   }
 )
 
-export default function FoodPageClient({ cityConfig, resources, slug, resourceType = 'food', pageTitle = 'Find Free Food', listTitle = 'All Food Resources' }: any) {
+type CityOption = { slug: string; name: string }
+
+export default function FoodPageClient({
+  cityConfig,
+  resources,
+  slug,
+  cities = [],
+  resourceType = 'food',
+  pageTitle = 'Find Free Food',
+  listTitle = 'All Food Resources',
+}: {
+  cityConfig: any
+  resources: Record<string, any>
+  slug: string
+  cities?: CityOption[]
+  resourceType?: ResourceType
+  pageTitle?: string
+  listTitle?: string
+}) {
   const normalizedType: ResourceType = (resourceType as ResourceType) || 'food'
+  const router = useRouter()
 
   const [selectedResource, setSelectedResource] = useState<MapResource | null>(null)
   const typedResources = resources as Record<string, any>
@@ -38,11 +58,35 @@ export default function FoodPageClient({ cityConfig, resources, slug, resourceTy
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <Link href={`/${slug}`} className={styles.backButton}>
-          <ArrowLeft size={20} /> Back
-        </Link>
+        <div className={styles.headerLeft}>
+          <Link href="/" className={styles.navLink}>
+            Home
+          </Link>
+          <Link href="/about" className={styles.navLink}>
+            About
+          </Link>
+        </div>
+
         <h1>{pageTitle}</h1>
-        <div className={styles.resourceCount}>{resourceList.length} locations</div>
+
+        <div className={styles.headerRight}>
+          <select
+            className={styles.citySelect}
+            value={slug}
+            aria-label="Select city"
+            onChange={(e) => {
+              const nextSlug = e.target.value
+              router.push(`/${nextSlug}/${normalizedType}`)
+            }}
+          >
+            {(cities || []).map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <div className={styles.resourceCount}>{resourceList.length} locations</div>
+        </div>
       </header>
 
       <div className={styles.mapContainer} style={{ height: 420 }}>
