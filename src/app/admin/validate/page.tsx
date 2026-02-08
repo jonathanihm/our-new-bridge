@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
-import styles from '../../admin.module.css'
+import styles from '../admin.module.css'
 
 interface ValidationResult {
   city: string
