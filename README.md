@@ -1,4 +1,4 @@
-This is an open source project to allow for quickly create new help networks in any area you choose.
+This is an open source project to allow for quickly creating new help networks in any area you choose.
 
 Our New Bridge can easily be run and managed as a standalone project for you, or you can create a new city/area for the main project and simply add the data.
 
@@ -125,7 +125,7 @@ Two map implementations are provided:
 - Google Maps: `components/FoodMap.tsx` — uses `@react-google-maps/api`. Do not commit API keys to config files; instead set an environment variable.
 - Leaflet: `components/FoodMapLeaflet.tsx` — uses `react-leaflet` and OpenStreetMap tiles; works without an API key.
 
-To change which map is used, open `src/app/[city]/food/FoodPageClient.tsx` and update the dynamic import. Example to use Leaflet:
+Leaflet is completely free and easier to setup. To change which map is used, open `src/app/[city]/food/FoodPageClient.tsx` and update the dynamic import. Example to use Leaflet:
 
 ```ts
 const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet'
