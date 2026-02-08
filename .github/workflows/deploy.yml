@@ -11,6 +11,13 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,13 +33,14 @@ jobs:
 
       - name: Run type check
         run: npm run build
-        env:
-          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
-          RESEND_API_KEY : ${{ secrets.RESEND_API_KEY }}
-          ADMIN_EMAIL : ${{ secrets.ADMIN_EMAIL }}
-          ADMIN_PASSWORD : ${{ secrets.ADMIN_PASSWORD }}
-          DATABASE_URL : ${{ secrets.DATABASE_URL }}
-          DIRECT_URL : ${{ secrets.DIRECT_URL }}
 
       - name: Deploy to Vercel
-        run: npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} --env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+        run: |
+          npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} \
+            --env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY" \
+            --env RESEND_API_KEY="$RESEND_API_KEY" \
+            --env ADMIN_EMAIL="$ADMIN_EMAIL" \
+            --env ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+            --env DATABASE_URL="$DATABASE_URL" \
+            --env DIRECT_URL="$DIRECT_URL" \
+            --build-env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"
