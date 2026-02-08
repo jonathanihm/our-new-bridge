@@ -1,7 +1,7 @@
 "use client"
 
 import 'leaflet/dist/leaflet.css'
-import type { FoodResource } from '../types'
+import type { MapResource } from '../types'
 import { useEffect } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -9,7 +9,7 @@ import FoodMapProps from './FoodMapProps'
 
 const containerStyle: React.CSSProperties = { width: '100%', height: '100%' }
 
-function FitBounds({ resources, center, zoom }: { resources: FoodResource[]; center: [number, number]; zoom: number }) {
+function FitBounds({ resources, center, zoom }: { resources: MapResource[]; center: [number, number]; zoom: number }) {
   const map = useMap()
   useEffect(() => {
     if (resources && resources.length > 0) {

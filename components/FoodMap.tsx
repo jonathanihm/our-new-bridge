@@ -1,6 +1,6 @@
 'use client'
 
-import type { FoodResource } from '../types'
+import type { MapResource } from '../types'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api'
 import FoodMapProps from './FoodMapProps'
@@ -13,7 +13,7 @@ export default function FoodMap({ resources, selectedResource, onSelectResource,
 
   const { isLoaded, loadError } = useLoadScript({ googleMapsApiKey: apiKey })
 
-  const [activeResource, setActiveResource] = useState<FoodResource | null>(selectedResource)
+  const [activeResource, setActiveResource] = useState<MapResource | null>(selectedResource)
   useEffect(() => setActiveResource(selectedResource), [selectedResource])
 
   const mapRef = useRef<any>(null)
@@ -41,7 +41,7 @@ export default function FoodMap({ resources, selectedResource, onSelectResource,
     map.setZoom(cityConfig.map.defaultZoom)
   }, [resources, cityConfig])
 
-  const handleMarkerClick = useCallback((resource: FoodResource) => {
+  const handleMarkerClick = useCallback((resource: MapResource) => {
     setActiveResource(resource)
     onSelectResource(resource)
   }, [onSelectResource])

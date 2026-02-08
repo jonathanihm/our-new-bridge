@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { MapPin, Clock, Phone, Info, Navigation, X, ArrowLeft } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import styles from './food.module.css'
-import type { FoodResource, ResourcesData } from '../../../../types'
+import type { MapResource, ResourceType } from '../../../../types'
+import ReportIssueButton from '@/components/ReportIssueButton/ReportIssueButton'
 
 const googleFoodMapComponent = '../../../../components/FoodMap';
 const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet';
@@ -20,12 +21,16 @@ const MapComponent = dynamic<any>(
   }
 )
 
-export default function FoodPageClient({ cityConfig, resources, slug }: any) {
-  const [selectedResource, setSelectedResource] = useState<FoodResource | null>(null)
-  const typedResources = resources as ResourcesData
-  const foodResources = typedResources.food
+export default function FoodPageClient({ cityConfig, resources, slug, resourceType = 'food', pageTitle = 'Find Free Food', listTitle = 'All Food Resources' }: any) {
+  const normalizedType: ResourceType = (resourceType as ResourceType) || 'food'
 
-  const handleGetDirections = (resource: FoodResource) => {
+  const [selectedResource, setSelectedResource] = useState<MapResource | null>(null)
+  const typedResources = resources as Record<string, any>
+  const resourceList: MapResource[] = Array.isArray(typedResources?.[normalizedType])
+    ? typedResources[normalizedType]
+    : []
+
+  const handleGetDirections = (resource: MapResource) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(resource.address)}`
     window.open(url, '_blank')
   }
@@ -36,13 +41,13 @@ export default function FoodPageClient({ cityConfig, resources, slug }: any) {
         <Link href={`/${slug}`} className={styles.backButton}>
           <ArrowLeft size={20} /> Back
         </Link>
-        <h1>Find Free Food</h1>
-        <div className={styles.resourceCount}>{foodResources.length} locations</div>
+        <h1>{pageTitle}</h1>
+        <div className={styles.resourceCount}>{resourceList.length} locations</div>
       </header>
 
       <div className={styles.mapContainer} style={{ height: 420 }}>
         <MapComponent
-          resources={foodResources}
+          resources={resourceList}
           selectedResource={selectedResource}
           onSelectResource={setSelectedResource}
           cityConfig={cityConfig}
@@ -93,18 +98,25 @@ export default function FoodPageClient({ cityConfig, resources, slug }: any) {
                 </div>
               )}
 
-              <button className={styles.directionsButton} onClick={() => handleGetDirections(selectedResource)}>
-                <Navigation size={18} />
-                Get Directions
-              </button>
+              <div className={styles.buttonRow}>
+                <button 
+                  className={styles.directionsButton}
+                  onClick={() => handleGetDirections(selectedResource)}
+                >
+                  <Navigation size={18} />
+                  Get Directions
+                </button>
+                
+                <ReportIssueButton resource={selectedResource} compact={true} />
+              </div>
             </div>
           </div>
         )}
       </div>
 
       <div className={styles.resourceList}>
-        <h3>All Food Resources</h3>
-        {foodResources.map((resource) => (
+        <h3>{listTitle}</h3>
+        {resourceList.map((resource) => (
           <div
             key={resource.id}
             className={`${styles.listItem} ${selectedResource?.id === resource.id ? styles.listItemSelected : ''}`}
@@ -114,8 +126,8 @@ export default function FoodPageClient({ cityConfig, resources, slug }: any) {
               <MapPin size={16} />
               <strong>{resource.name}</strong>
             </div>
-            <div className={styles.listItemHours}>{resource.hours}</div>
-            {!resource.requiresId && (
+            <div className={styles.listItemHours}>{resource.hours || ''}</div>
+            {!resource.requiresId && resource.requiresId !== undefined && (
               <div className={`${styles.badgeSmall} ${styles.badgeGreen}`}>No ID Required</div>
             )}
           </div>

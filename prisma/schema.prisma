@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model City {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  state     String?
+  fullName  String?
+  tagline   String   @default("Find help. Fast.")
+  description String @default("A simple, humane platform for finding essential resources")
+  
+  centerLat Float
+  centerLng Float
+  defaultZoom Int @default(12)
+  
+  resources Resource[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ResourceCategory {
+  food
+  shelter
+  housing
+  legal
+}
+
+model Resource {
+  id        String   @id @default(cuid())
+  externalId String  // The original ID from JSON/admin form
+
+  category  ResourceCategory @default(food)
+  
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  
+  name      String
+  address   String
+  lat       Float?
+  lng       Float?
+  hours     String?
+  daysOpen  String?
+  phone     String?
+  website   String?
+  requiresId Boolean @default(false)
+  walkIn    Boolean @default(false)
+  notes     String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([cityId, category, externalId])
+  @@index([cityId])
+  @@index([cityId, category])
+}

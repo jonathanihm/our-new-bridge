@@ -1,0 +1,40 @@
+.button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border, #e8dcc4);
+  color: var(--text-light, #666);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button:hover {
+  background: var(--surface, #f4f1e8);
+  border-color: var(--accent, #a3b18a);
+  color: var(--primary, #3a5a40);
+}
+
+.compactButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border, #e8dcc4);
+  color: var(--text-light, #666);
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 40px;
+  height: 40px;
+}
+
+.compactButton:hover {
+  background: var(--surface, #f4f1e8);
+  border-color: var(--accent, #a3b18a);
+  color: var(--primary, #3a5a40);
+}

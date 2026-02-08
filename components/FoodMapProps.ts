@@ -1,9 +1,9 @@
-import { CityConfig, FoodResource } from "@/types"
+import { CityConfig, MapResource } from "@/types"
 
 interface FoodMapProps {
-  resources: FoodResource[]
-  selectedResource: FoodResource | null
-  onSelectResource: (resource: FoodResource | null) => void
+  resources: MapResource[]
+  selectedResource: MapResource | null
+  onSelectResource: (resource: MapResource | null) => void
   cityConfig: CityConfig
 }
 

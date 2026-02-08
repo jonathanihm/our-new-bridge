@@ -1,112 +1,199 @@
-This is an open source project to allow for quickly create new help networks in any area you choose.
+# Our New Bridge
 
-Our New Bridge can easily be run and managed as a standalone project for you, or you can create a new city/area for the main project and simply add the data.
+Our New Bridge is a starter kit for publishing local “help maps” (food, shelter, housing, legal) for any city.
 
-Getting started
----------------
+Non-technical users should use the Admin Dashboard to add/edit cities and locations.
 
-Run the dev server:
+## Quick Start (Local)
+
+Prereq: Node.js 18+
+
+### Option A (recommended): use the setup script
+
+**Windows (PowerShell):**
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass; .\setup.ps1
+```
+
+**macOS/Linux (bash):**
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+The setup script installs dependencies and creates a `.env` file from `.env.example` (used for optional map keys).
+
+### Option B: manual setup
+
+```bash
+npm install
+```
+
+Create `.env.local` (used by Next.js and by the Prisma scripts in `package.json`):
+
+```bash
+ADMIN_PASSWORD=admin123
+```
+
+(Optional) If you ran the setup script, it created `.env` already. You can leave it as-is unless you want to add a Google Maps key.
+
+Run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-Open http://localhost:3000
+Open:
+- App: http://localhost:3000/des-moines/food
+- Admin: http://localhost:3000/admin
 
-Overview
---------
+## Data Storage Options
 
-This repo is organized to make it easy to add new cities and their location data. Key paths:
+This project supports two modes:
 
-- `config/cities/<city>.json` — per-city configuration (name, slug, map settings)
-- `data/<city>/resources.json` — per-city resources (food locations)
-- `src/app/[city]/food/page.tsx` — server page that loads city data and renders `FoodPageClient`
-- `src/app/[city]/food/FoodPageClient.tsx` — client UI wrapper (loads map component dynamically)
-- `components/FoodMap.tsx` — Google Maps implementation
-- `components/FoodMapLeaflet.tsx` — Leaflet/OpenStreetMap implementation
+1) **JSON mode (simplest):** no database. Data lives in `config/` and `data/`.
+2) **Supabase mode (recommended for deployments):** persistent cloud database.
 
-Adding a new city
------------------
+The app automatically uses Supabase mode when `DATABASE_URL` is set and starts with `postgresql://` or `postgres://`.
 
-1. Create a config file at `config/cities/<city>.json` with at least:
+## Supabase Setup (Optional)
+
+1) Create a Supabase project and copy the **URI** connection string.
+
+2) Update `.env.local`:
+
+```bash
+DATABASE_URL=postgresql://...
+ADMIN_PASSWORD=your-secure-password
+```
+
+3) Push schema:
+
+```bash
+npm run prisma:push
+```
+
+4) (Optional) Import existing JSON data into Supabase:
+
+```bash
+npm run migrate:json
+```
+
+If your network cannot reach Supabase, run the schema push from CI/GitHub Actions (Actions tab).
+
+## Admin Dashboard
+
+The Admin Dashboard works in both JSON mode and Supabase mode.
+
+- URL: http://localhost:3000/admin
+- Password: whatever you set as `ADMIN_PASSWORD` in `.env.local`
+- Backup: use **Export** to download a single JSON file containing the same schema as `config/cities/*` + `data/*/resources.json`
+
+## Routes (Resource Types)
+
+All resource types reuse the same page UI. Use these routes:
+
+- `/{city}/food`
+- `/{city}/shelter`
+- `/{city}/housing`
+- `/{city}/legal`
+
+These can be enabled/disabled per city via `config/cities/<slug>.json` → `features.<type>.enabled`.
+
+## JSON File Schemas (If You Prefer Editing Files)
+
+### City config
+
+Create: `config/cities/your-city.json`
 
 ```json
 {
-  "name": "Des Moines",
-  "slug": "des-moines",
+  "slug": "your-city",
+  "city": {
+    "name": "Your City",
+    "state": "Your State",
+    "fullName": "Your City Metro",
+    "tagline": "Find help. Fast.",
+    "description": "A simple, humane platform for finding essential resources"
+  },
   "map": {
     "centerLat": 41.5868,
-    "centerLng": -93.6250,
-    "defaultZoom": 12,
-    "googleApiKey": "YOUR_GOOGLE_KEY"
+    "centerLng": -93.625,
+    "defaultZoom": 12
+  },
+  "features": {
+    "food": { "enabled": true, "title": "Find Free Food", "icon": "🍽️" },
+    "shelter": { "enabled": false, "title": "Find Shelter", "icon": "🏠" },
+    "housing": { "enabled": false, "title": "Housing Help", "icon": "🏘️" },
+    "legal": { "enabled": false, "title": "Legal Help", "icon": "⚖️" }
+  },
+  "contact": {
+    "email": "hello@ournewbridge.org",
+    "volunteer": true
+  },
+  "branding": {
+    "primaryColor": "#3a5a40",
+    "secondaryColor": "#588157",
+    "accentColor": "#a3b18a",
+    "backgroundColor": "#fdfbf7"
   }
 }
 ```
 
-2. Add resources at `data/<city>/resources.json` using this shape:
+### Resources
+
+Create: `data/your-city/resources.json`
 
 ```json
 {
   "food": [
     {
-      "id": "unique-id",
-      "name": "Site name",
-      "address": "123 Main St",
-      "lat": "41.5868",
-      "lng": "-93.6250",
-      "hours": "10:00 AM - 2:00 PM",
-      "daysOpen": "Mon, Wed, Fri",
-      "phone": "(555) 555-5555",
+      "id": "your-city-001",
+      "name": "Community Food Bank",
+      "address": "123 Main St, Your City, ST 12345",
+      "lat": 41.5868,
+      "lng": -93.625,
+      "hours": "9:00 AM - 5:00 PM",
+      "daysOpen": "Mon, Tue, Wed, Thu, Fri",
+      "phone": "(555) 123-4567",
+      "website": "https://example.org",
       "requiresId": false,
       "walkIn": true,
-      "notes": "Additional notes"
+      "notes": "Free food available"
     }
-  ]
+  ],
+  "shelter": [],
+  "housing": [],
+  "legal": []
 }
-
-You can have ChatGPT manually create these with you or create a small application to help you with this.
 ```
 
-3. Visit `/<city>/food` (for example `/des-moines/food`). The server page will read the config and resources files and pass them to the client wrapper.
+## Maps
 
-Fields & features
-------------------
+Default is OpenStreetMap/Leaflet (no API key).
 
-- `requiresId` (boolean): toggles badge color and label.
-- `walkIn` (boolean): shows a "Walk-ins Welcome" badge.
-- `hours`, `daysOpen`, `phone`, `notes`: optional display fields in resource card.
+Google Maps is supported if you set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (either in `.env.local` or in `.env`).
 
-Map component options
----------------------
+## Key Commands
 
-Two map implementations are provided:
-
-- Google Maps: `components/FoodMap.tsx` — uses `@react-google-maps/api`. Do not commit API keys to config files; instead set an environment variable.
-- Leaflet: `components/FoodMapLeaflet.tsx` — uses `react-leaflet` and OpenStreetMap tiles; works without an API key.
-
-To change which map is used, open `src/app/[city]/food/FoodPageClient.tsx` and update the dynamic import. Example to use Leaflet:
-
-```ts
-const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet'
-const MapComponent = dynamic<any>(() => import(leafletFoodMapComponent).then(m => m.default), { ssr: false })
+```bash
+npm run dev
+npm run validate
+npm run prisma:push
+npm run migrate:json
 ```
 
+## Troubleshooting
 
-Scaffolding suggestion
-----------------------
-#TODO - create scripts to scaffold cities
+**Port 3000 is in use**
 
-Add a small script `scripts/add-city.ts` that copies a config template and sample resources into `config/cities/<city>.json` and `data/<city>/resources.json`. Also consider exposing `DEFAULT_CITY` env var for fallback redirects.
+```bash
+npm run dev -- -p 3001
+```
 
-Environment variables (recommended)
----------------------------------
+**Supabase not taking effect**
 
-Update `.env.local` in the project root and add your Google Maps key
-
-The server loader in `src/app/[city]/food/page.tsx` will automatically use the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
-
-If you are going to use GitHub, please create a secret with the same secret name
+- Confirm `DATABASE_URL` is present in `.env.local` and starts with `postgresql://` or `postgres://`.
+- Restart `npm run dev`.

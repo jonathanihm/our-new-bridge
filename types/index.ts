@@ -71,6 +71,24 @@ export interface ResourcesData {
   legal: LegalResource[]
 }
 
+export type ResourceType = keyof ResourcesData
+
+// Minimal shared shape used by the map + list UI.
+export interface MapResource {
+  id: string
+  name: string
+  address: string
+  lat?: number | null
+  lng?: number | null
+  hours?: string
+  daysOpen?: string
+  phone?: string
+  website?: string
+  notes?: string
+  requiresId?: boolean
+  walkIn?: boolean
+}
+
 export interface CityConfig {
   slug?: string,
   map: {

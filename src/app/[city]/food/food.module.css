@@ -210,10 +210,10 @@
   background: var(--primary);
   color: white;
   border: none;
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   border-radius: 8px;
   font-size: 1rem;
-  margin-top: 1.5rem;
+  /* margin-top: 1.5rem; */
   transition: all 0.2s;
 }
 
@@ -277,6 +277,41 @@
   border-radius: 15px;
   font-size: 0.75rem;
   margin-left: 1.5rem;
+}
+
+/* Add to your food.module.css or equivalent */
+.buttonRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.directionsButton {
+  flex: 1; /* Takes remaining space */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.directionsButton:hover {
+  background: #344e41;
+}
+
+/* Mobile: Stack vertically */
+@media (max-width: 480px) {
+  .buttonRow {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
 
 @media (max-width: 768px) {

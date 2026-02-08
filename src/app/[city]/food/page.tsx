@@ -1,5 +1,4 @@
-import path from 'path'
-import fs from 'fs'
+import { getCityBySlug } from '@/lib/db-utils'
 import { redirect } from 'next/navigation'
 import FoodPageClient from './FoodPageClient'
 
@@ -7,23 +6,56 @@ export default async function Page({ params }: { params: any }) {
   const { city } = await params
   if (!city) return redirect('/des-moines/food')
 
-  const base = process.cwd()
-  const cfgPath = path.join(base, 'config', 'cities', `${city}.json`)
-  const resPath = path.join(base, 'data', city, 'resources.json')
+  const cityData = await getCityBySlug(city)
 
-  if (!fs.existsSync(cfgPath)) throw new Error(`City config not found: ${city}`)
-  if (!fs.existsSync(resPath)) throw new Error(`Resources not found for city: ${city}`)
-
-  const cityConfig = JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
-  const resources = JSON.parse(fs.readFileSync(resPath, 'utf8'))
-
-  // Prefer supplying the Google Maps API key via environment variables
-  // Avoid committing API keys in `config/cities/*.json`. Use NEXT_PUBLIC_* if the key
-  // must be available on the client. This keeps configs safe while allowing overrides.
-  const envKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY
-  if (envKey) {
-    cityConfig.map = { ...(cityConfig.map || {}), googleApiKey: envKey }
+  if (!cityData) {
+    throw new Error(`City not found: ${city}`)
   }
 
-  return <FoodPageClient cityConfig={cityConfig} resources={resources} slug={city} />
+  // Transform to match the existing page props
+  const cityConfig = {
+    slug: cityData.slug,
+    city: {
+      name: cityData.name,
+      state: cityData.state || '',
+    },
+    map: {
+      centerLat: cityData.centerLat,
+      centerLng: cityData.centerLng,
+      defaultZoom: cityData.defaultZoom || 14,
+      type: cityData.mapType || 'google',
+      googleApiKey:
+        process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY,
+    },
+  }
+
+  const resources = {
+    food: Array.isArray(cityData.resources)
+      ? cityData.resources.map((r: any) => ({
+          id: r.id || r.externalId,
+          name: r.name,
+          address: r.address,
+          lat: r.lat,
+          lng: r.lng,
+          hours: r.hours || '',
+          daysOpen: r.daysOpen || '',
+          phone: r.phone || '',
+          website: r.website || '',
+          notes: r.notes || '',
+          requiresId: r.requiresId || false,
+          walkIn: r.walkIn || false,
+        }))
+      : [],
+  }
+
+  return (
+    <FoodPageClient
+      cityConfig={cityConfig}
+      resources={resources}
+      slug={city}
+      resourceType="food"
+      pageTitle="Find Free Food"
+      listTitle="All Food Resources"
+    />
+  )
 }
