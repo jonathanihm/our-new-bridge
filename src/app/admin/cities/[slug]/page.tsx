@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Plus, AlertCircle } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Trash2 } from 'lucide-react'
 import styles from '../../admin.module.css'
 
 interface Resource {
@@ -40,6 +40,8 @@ export default function CityPage() {
     notes: '',
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null)
+  const [isDeletingResource, setIsDeletingResource] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -70,10 +72,20 @@ export default function CityPage() {
   }
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, type, value, checked } = e.target as any
+    const target = e.target
+    const name = target.name
+
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: target.checked,
+      }))
+      return
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: target.value,
     }))
   }
 
@@ -147,6 +159,46 @@ export default function CityPage() {
       walkIn: false,
       notes: '',
     })
+  }
+
+  const handleDeleteResource = async () => {
+    if (!resourceToDelete) return
+
+    setIsDeletingResource(true)
+    setError('')
+
+    try {
+      const token = sessionStorage.getItem('adminToken')
+      const res = await fetch(`/api/admin/cities/${slug}/resources`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: resourceToDelete.id }),
+      })
+
+      if (res.status === 401) {
+        sessionStorage.removeItem('adminToken')
+        router.push('/admin')
+        return
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete resource')
+      }
+
+      setResourceToDelete(null)
+      if (editingId === resourceToDelete.id) {
+        handleCancel()
+      }
+      await fetchResources()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete resource')
+    } finally {
+      setIsDeletingResource(false)
+    }
   }
 
   if (isLoading) {
@@ -345,14 +397,24 @@ export default function CityPage() {
             <div key={resource.id} className={styles.resourceItem}>
               <div className={styles.resourceHeader}>
                 <h3>{resource.name}</h3>
-                <button
-                  type="button"
-                  onClick={() => handleEdit(resource)}
-                  className={styles.editButton}
-                  disabled={isSaving}
-                >
-                  Edit
-                </button>
+                <div className={styles.resourceHeaderActions}>
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(resource)}
+                    className={styles.editButton}
+                    disabled={isSaving || isDeletingResource}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResourceToDelete(resource)}
+                    className={styles.dangerButtonSmall}
+                    disabled={isSaving || isDeletingResource}
+                  >
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </div>
               </div>
               <p>{resource.address}</p>
               {resource.hours && <p className={styles.resourceDetail}>Hours: {resource.hours}</p>}
@@ -364,6 +426,35 @@ export default function CityPage() {
           ))
         )}
       </div>
+
+      {resourceToDelete && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.modal}>
+            <h3 className={styles.modalTitle}>Delete resource?</h3>
+            <p className={styles.modalBody}>
+              This will permanently delete <strong>{resourceToDelete.name}</strong> (<code>{resourceToDelete.id}</code>).
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                onClick={() => setResourceToDelete(null)}
+                disabled={isDeletingResource}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.dangerButton}
+                onClick={handleDeleteResource}
+                disabled={isDeletingResource}
+              >
+                {isDeletingResource ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

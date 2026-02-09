@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { readdir, readFile, writeFile } from 'fs/promises'
+import { readdir, readFile, writeFile, rm, unlink } from 'fs/promises'
 import { join } from 'path'
 
 const CONFIG_DIR = join(process.cwd(), 'config', 'cities')
@@ -204,6 +204,36 @@ export async function createCity(data: {
     }
     return data
   }
+}
+
+export async function deleteCity(slug: string) {
+  if (USE_DATABASE) {
+    const prismaClient = getPrismaClient()!
+    return await prismaClient.city.delete({ where: { slug } })
+  }
+
+  // JSON-based
+  try {
+    await unlink(join(CONFIG_DIR, `${slug}.json`))
+  } catch (error) {
+    if (!error || typeof error !== 'object' || (error as { code?: string }).code !== 'ENOENT') {
+      if (isReadOnlyFilesystemError(error)) {
+        throw new Error(jsonWriteNotSupportedMessage())
+      }
+      throw error
+    }
+  }
+
+  try {
+    await rm(join(DATA_DIR, slug), { recursive: true, force: true })
+  } catch (error) {
+    if (isReadOnlyFilesystemError(error)) {
+      throw new Error(jsonWriteNotSupportedMessage())
+    }
+    throw error
+  }
+
+  return { slug }
 }
 
 export async function validateConfig() {
@@ -447,6 +477,55 @@ export async function upsertResource(
     }
     return data
   }
+}
+
+export async function deleteResource(slug: string, id: string, category: ResourceType = 'food') {
+  const normalizedId = String(id).trim()
+
+  if (USE_DATABASE) {
+    const prismaClient = getPrismaClient()!
+    const city = await prismaClient.city.findUnique({ where: { slug } })
+    if (!city) throw new Error('City not found')
+
+    return await prismaClient.resource.delete({
+      where: {
+        cityId_category_externalId: {
+          cityId: city.id,
+          category: category as any,
+          externalId: normalizedId,
+        },
+      },
+    })
+  }
+
+  // JSON-based
+  const resourcePath = join(DATA_DIR, slug, 'resources.json')
+  let resources: Record<string, any[]> = { food: [], shelter: [], housing: [], legal: [] }
+
+  try {
+    const parsed = JSON.parse(await readFile(resourcePath, 'utf-8'))
+    if (parsed && typeof parsed === 'object') {
+      for (const t of RESOURCE_TYPES) {
+        if (Array.isArray(parsed[t])) resources[t] = parsed[t]
+      }
+    }
+  } catch {
+    // If resources file doesn't exist, treat as empty.
+  }
+
+  const list = Array.isArray(resources[category]) ? resources[category] : []
+  resources[category] = list.filter((r: any) => String(r?.id ?? '').trim() !== normalizedId)
+
+  try {
+    await writeFile(resourcePath, JSON.stringify(resources, null, 2))
+  } catch (error) {
+    if (isReadOnlyFilesystemError(error)) {
+      throw new Error(jsonWriteNotSupportedMessage())
+    }
+    throw error
+  }
+
+  return { slug, id: normalizedId, category }
 }
 
 export async function exportData() {

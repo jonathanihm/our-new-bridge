@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCities, createCity } from '@/lib/db-utils'
+import { getCities, createCity, deleteCity } from '@/lib/db-utils'
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
 
@@ -20,8 +20,16 @@ export async function GET(request: NextRequest) {
   try {
     const cities = await getCities()
 
+    type CityLike = {
+      slug: string
+      name: string
+      state?: string | null
+      _count?: { resources?: number }
+      resources?: unknown[]
+    }
+
     return NextResponse.json(
-      cities.map((c: any) => ({
+      (cities as CityLike[]).map((c) => ({
         slug: c.slug,
         name: c.name,
         state: c.state || '',
@@ -66,6 +74,29 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create city' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!checkAuth(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+    const { slug } = body || {}
+
+    if (!slug) {
+      return NextResponse.json({ error: 'Missing required field: slug' }, { status: 400 })
+    }
+
+    await deleteCity(String(slug))
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete city' },
       { status: 500 }
     )
   }

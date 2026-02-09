@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getResourcesByCity, upsertResource } from '@/lib/db-utils'
+import { deleteResource, getResourcesByCity, upsertResource } from '@/lib/db-utils'
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+
+type ResourceCategory = 'food' | 'shelter' | 'housing' | 'legal'
+
+function normalizeCategory(value: unknown): ResourceCategory {
+  if (value === 'shelter' || value === 'housing' || value === 'legal') return value
+  return 'food'
+}
 
 function checkAuth(request: NextRequest) {
   const auth = request.headers.get('authorization')
@@ -14,18 +21,33 @@ function checkAuth(request: NextRequest) {
 
 export async function GET(
   request: NextRequest,
-  ctx: { params: any }
+    ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
   if (!checkAuth(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const { slug } = await ctx.params
+      const { slug } = await Promise.resolve(ctx.params)
     const resources = await getResourcesByCity(slug)
 
+    type ResourceLike = {
+      id?: string
+      externalId?: string
+      name?: string
+      address?: string
+      lat?: number | string | null
+      lng?: number | string | null
+      hours?: string | null
+      daysOpen?: string | null
+      phone?: string | null
+      requiresId?: boolean | null
+      walkIn?: boolean | null
+      notes?: string | null
+    }
+
     return NextResponse.json({
-      food: resources.map((r: any) => ({
+      food: (resources as ResourceLike[]).map((r) => ({
         id: r.externalId || r.id,
         name: r.name,
         address: r.address,
@@ -46,14 +68,14 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  ctx: { params: any }
+    ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
   if (!checkAuth(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const { slug } = await ctx.params
+      const { slug } = await Promise.resolve(ctx.params)
     const body = await request.json()
     const { id, name, address, lat, lng, hours, daysOpen, phone, requiresId, walkIn, notes } = body
 
@@ -86,6 +108,33 @@ export async function POST(
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to save resource' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+    ctx: { params: { slug: string } | Promise<{ slug: string }> }
+) {
+  if (!checkAuth(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+      const { slug } = await Promise.resolve(ctx.params)
+    const body = await request.json()
+    const { id, category } = body || {}
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing required field: id' }, { status: 400 })
+    }
+
+    await deleteResource(String(slug), String(id), normalizeCategory(category))
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete resource' },
       { status: 500 }
     )
   }

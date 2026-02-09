@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Plus, Eye, Download, LogOut, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, Eye, Download, LogOut, AlertCircle, CheckCircle, Trash2 } from 'lucide-react'
 import styles from '../admin.module.css'
 
 interface City {
@@ -17,6 +17,8 @@ export default function AdminDashboard() {
   const [cities, setCities] = useState<City[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [cityToDelete, setCityToDelete] = useState<City | null>(null)
+  const [isDeletingCity, setIsDeletingCity] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -72,6 +74,43 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       setError('Failed to export data')
+    }
+  }
+
+  const handleDeleteCity = async () => {
+    if (!cityToDelete) return
+
+    setIsDeletingCity(true)
+    setError('')
+
+    try {
+      const token = sessionStorage.getItem('adminToken')
+      const res = await fetch('/api/admin/cities', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ slug: cityToDelete.slug }),
+      })
+
+      if (res.status === 401) {
+        sessionStorage.removeItem('adminToken')
+        router.push('/admin')
+        return
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete city')
+      }
+
+      setCityToDelete(null)
+      await fetchCities()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete city')
+    } finally {
+      setIsDeletingCity(false)
     }
   }
 
@@ -148,12 +187,48 @@ export default function AdminDashboard() {
                   <Link href={`/${city.slug}/food`} target="_blank" className={styles.linkButton}>
                     View Live
                   </Link>
+                  <button
+                    type="button"
+                    className={styles.dangerLinkButton}
+                    onClick={() => setCityToDelete(city)}
+                  >
+                    <Trash2 size={16} /> Delete
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {cityToDelete && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.modal}>
+            <h3 className={styles.modalTitle}>Delete city?</h3>
+            <p className={styles.modalBody}>
+              This will permanently delete <strong>{cityToDelete.name}</strong> (<code>{cityToDelete.slug}</code>) and all of its resources.
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                onClick={() => setCityToDelete(null)}
+                disabled={isDeletingCity}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.dangerButton}
+                onClick={handleDeleteCity}
+                disabled={isDeletingCity}
+              >
+                {isDeletingCity ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.section}>
         <h2>Tools</h2>

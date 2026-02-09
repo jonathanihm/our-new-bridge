@@ -393,6 +393,29 @@
   background: var(--surface, #f4f1e8);
 }
 
+.dangerLinkButton {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.5rem;
+  border: 1px solid #c00;
+  border-radius: 6px;
+  text-align: center;
+  text-decoration: none;
+  color: #c00;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dangerLinkButton:hover:not(:disabled) {
+  background: #fee;
+}
+
 .section {
   margin-top: 2rem;
 }
@@ -544,6 +567,12 @@
   margin-bottom: 0.5rem;
 }
 
+.resourceHeaderActions {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .resourceHeader h3 {
   margin: 0;
   color: var(--primary);
@@ -569,6 +598,91 @@
 .editButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.dangerButtonSmall {
+  padding: 0.5rem 1rem;
+  background: #c00;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dangerButtonSmall:hover:not(:disabled) {
+  background: #a00;
+}
+
+.dangerButtonSmall:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dangerButton {
+  padding: 0.875rem 1.5rem;
+  background: #c00;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: #a00;
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Confirmation Modal */
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.modal {
+  width: min(520px, 100%);
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border, #e8dcc4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modalTitle {
+  margin: 0 0 0.75rem 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.modalBody {
+  margin: 0 0 1.25rem 0;
+  color: var(--text);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .resourceDetail {
