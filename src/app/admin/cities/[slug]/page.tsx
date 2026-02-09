@@ -268,7 +268,7 @@ export default function CityPage() {
   }
 
   const handleEdit = (resource: Resource) => {
-    setEditingId(resource.id)
+    setEditingId(resource.id || null)
     setFormData(resource)
   }
 
