@@ -39,6 +39,22 @@ jobs:
             exit 1
           fi
 
+          node - <<'NODE'
+          const raw = process.env.DATABASE_URL || process.env.DIRECT_URL;
+          if (!raw) process.exit(0);
+          const trimmed = String(raw).trim();
+          const unquoted = ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'")))
+            ? trimmed.slice(1, -1).trim()
+            : trimmed;
+          try {
+            const u = new URL(unquoted);
+            if (u.protocol !== 'postgresql:' && u.protocol !== 'postgres:') throw new Error('Not a postgres URL');
+          } catch {
+            console.error('DATABASE_URL/DIRECT_URL is present but not a valid postgres URL (common cause: accidental surrounding quotes).');
+            process.exit(1);
+          }
+          NODE
+
       - name: Run type check
         run: npm run build
 

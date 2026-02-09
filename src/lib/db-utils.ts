@@ -22,7 +22,17 @@ function getDatabaseUrlCandidate() {
 
   if (!raw) return undefined
   const trimmed = raw.trim()
-  return trimmed.length ? trimmed : undefined
+  if (!trimmed.length) return undefined
+
+  // GitHub/Vercel env vars sometimes end up with surrounding quotes
+  // if the value was copied from a dotenv file.
+  const unquoted =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1).trim()
+      : trimmed
+
+  return unquoted.length ? unquoted : undefined
 }
 
 // Check if we have a valid Postgres URL (postgresql:// or postgres://)
