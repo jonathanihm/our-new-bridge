@@ -148,6 +148,25 @@ The server loader in `src/app/[city]/food/page.tsx` will automatically use the `
 
 If you are going to use GitHub, please create a secret with the same secret name
 
+Data sources
+------------
+
+This app can read data from one of three sources:
+
+- `database` (recommended for production): uses Prisma/Postgres
+- `airtable` (read-only in app): edits happen in Airtable UI
+- `json` (local testing only): reads/writes `config/` and `data/` files on disk
+
+Select the source with a single env var:
+
+```
+DATA_SOURCE=database
+```
+
+Valid values: `database`, `airtable`, `json` (or leave unset for auto-detect).
+
+Important: `json` mode only works for local testing. Most production hosts use a read-only or ephemeral filesystem, so JSON edits will fail or be wiped on redeploy. Use `database` or `airtable` in production.
+
 Airtable setup (optional)
 -------------------------
 
@@ -193,7 +212,7 @@ Step 3: Configure environment variables
 Add these to `.env.local` (or your hosting provider settings):
 
 ```
-USE_AIRTABLE=true
+DATA_SOURCE=airtable
 AIRTABLE_API_KEY=your_token
 AIRTABLE_BASE_ID=appXXXXXXXXXXXXXX
 AIRTABLE_CITIES_TABLE=Cities
@@ -208,4 +227,4 @@ Notes
 -----
 
 - Airtable mode is read-only in the app; use Airtable UI for edits.
-- To switch back to DB or JSON, set `USE_AIRTABLE=false` (and configure DB or remove DB envs for JSON mode).
+- To switch sources, set `DATA_SOURCE=database`, `DATA_SOURCE=airtable`, or `DATA_SOURCE=json`.

@@ -129,22 +129,16 @@ function getDatabaseUrlCandidate() {
   return unquoted.length ? unquoted : undefined
 }
 
-function readUseDatabaseOverride() {
-  const raw = process.env.USE_DATABASE
-  if (!raw) return undefined
-  const normalized = raw.trim().toLowerCase()
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
-  return undefined
-}
+type DataSourceMode = 'database' | 'airtable' | 'json' | 'auto'
 
-function readUseAirtableOverride() {
-  const raw = process.env.USE_AIRTABLE
-  if (!raw) return undefined
+function readDataSourceMode(): DataSourceMode {
+  const raw = process.env.DATA_SOURCE
+  if (!raw) return 'auto'
   const normalized = raw.trim().toLowerCase()
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
-  return undefined
+  if (normalized === 'database') return 'database'
+  if (normalized === 'airtable') return 'airtable'
+  if (normalized === 'json') return 'json'
+  return 'auto'
 }
 
 // Check if we have a valid Postgres URL (postgresql:// or postgres://)
@@ -159,15 +153,16 @@ const isValidDatabaseUrl = (url: string | undefined) => {
 }
 
 const resolvedDatabaseUrl = getDatabaseUrlCandidate()
-const useDatabaseOverride = readUseDatabaseOverride()
-const useAirtableOverride = readUseAirtableOverride()
-export const USE_AIRTABLE = typeof useAirtableOverride === 'boolean' ? useAirtableOverride : false
+const dataSourceMode = readDataSourceMode()
+export const USE_AIRTABLE = dataSourceMode === 'airtable'
 export const USE_DATABASE =
-  typeof useDatabaseOverride === 'boolean'
-    ? useDatabaseOverride
-    : USE_AIRTABLE
+  dataSourceMode === 'database'
+    ? true
+    : dataSourceMode === 'json'
       ? false
-      : isValidDatabaseUrl(resolvedDatabaseUrl)
+      : USE_AIRTABLE
+        ? false
+        : isValidDatabaseUrl(resolvedDatabaseUrl)
 
 // Ensure Prisma reads the resolved DB URL even if the host uses a different env var name.
 if (USE_DATABASE && resolvedDatabaseUrl && process.env.DATABASE_URL !== resolvedDatabaseUrl) {
