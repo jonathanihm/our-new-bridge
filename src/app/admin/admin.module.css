@@ -53,6 +53,20 @@
   font-size: 0.95rem;
 }
 
+.tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  background: var(--surface, #f4f1e8);
+  color: var(--text-light, #666);
+  cursor: help;
+}
+
 .input {
   padding: 0.75rem;
   border: 1px solid var(--border, #e8dcc4);
@@ -92,6 +106,39 @@
 .textarea:disabled {
   background: var(--surface, #f4f1e8);
   cursor: not-allowed;
+}
+
+.suggestionsList {
+  list-style: none;
+  margin: 0.5rem 0 0 0;
+  padding: 0;
+  border: 1px solid var(--border, #e8dcc4);
+  border-radius: 6px;
+  background: #fff;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.suggestionItem {
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.suggestionItem:hover {
+  background: var(--surface, #f4f1e8);
+}
+
+.suggestionHint {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-light, #666);
 }
 
 .error {

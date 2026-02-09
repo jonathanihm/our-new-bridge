@@ -116,6 +116,7 @@ Fields & features
 - `requiresId` (boolean): toggles badge color and label.
 - `walkIn` (boolean): shows a "Walk-ins Welcome" badge.
 - `hours`, `daysOpen`, `phone`, `notes`: optional display fields in resource card.
+- `externalId` (string): stable identifier used to match resources across imports/exports. In JSON mode it mirrors `id`; in database mode it preserves legacy IDs during migrations.
 
 Map component options
 ---------------------
@@ -145,6 +146,8 @@ Environment variables (recommended)
 Update `.env.local` in the project root and add your Google Maps key
 
 The server loader in `src/app/[city]/food/page.tsx` will automatically use the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
+
+For address-only resource entry, set `GOOGLE_GEOCODING_API_KEY` (or reuse `GOOGLE_MAPS_API_KEY`). The admin API will geocode the address and store lat/lng automatically.
 
 If you are going to use GitHub, please create a secret with the same secret name
 

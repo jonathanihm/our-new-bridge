@@ -8,7 +8,7 @@ import { ArrowLeft, AlertCircle, Trash2 } from 'lucide-react'
 import styles from '../../admin.module.css'
 
 interface Resource {
-  id: string
+  id?: string
   name: string
   address: string
   lat: string
@@ -19,6 +19,11 @@ interface Resource {
   requiresId: boolean
   walkIn: boolean
   notes: string
+}
+
+type PlaceSuggestion = {
+  placeId: string
+  description: string
 }
 
 export default function CityPage() {
@@ -43,8 +48,12 @@ export default function CityPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null)
   const [isDeletingResource, setIsDeletingResource] = useState(false)
+  const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([])
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
+  const [suppressSuggestions, setSuppressSuggestions] = useState(false)
   const router = useRouter()
   const { status } = useSession()
+  const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   const fetchResources = useCallback(async () => {
     try {
@@ -90,16 +99,137 @@ export default function CityPage() {
     }))
   }
 
+  const fetchAddressSuggestions = useCallback(async (input: string) => {
+    if (!googleApiKey) return
+
+    setIsFetchingSuggestions(true)
+    try {
+      const response = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': googleApiKey,
+          'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text',
+        },
+        body: JSON.stringify({ input }),
+      })
+
+      if (!response.ok) {
+        setAddressSuggestions([])
+        return
+      }
+
+      const data = (await response.json()) as {
+        suggestions?: Array<{
+          placePrediction?: {
+            placeId?: string
+            text?: { text?: string }
+          }
+        }>
+      }
+
+      const nextSuggestions: PlaceSuggestion[] = (data.suggestions || [])
+        .map((item) => ({
+          placeId: item.placePrediction?.placeId || '',
+          description: item.placePrediction?.text?.text || '',
+        }))
+        .filter((item) => item.placeId && item.description)
+
+      setAddressSuggestions(nextSuggestions)
+    } catch (error) {
+      console.error(error)
+      setAddressSuggestions([])
+    } finally {
+      setIsFetchingSuggestions(false)
+    }
+  }, [googleApiKey])
+
+  useEffect(() => {
+    if (suppressSuggestions) {
+      setSuppressSuggestions(false)
+      setAddressSuggestions([])
+      return
+    }
+    const input = (formData.address || '').trim()
+    if (!googleApiKey || input.length < 3) {
+      setAddressSuggestions([])
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      fetchAddressSuggestions(input)
+    }, 300)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [fetchAddressSuggestions, formData.address, googleApiKey])
+
+  const handleSelectSuggestion = async (suggestion: PlaceSuggestion) => {
+    setAddressSuggestions([])
+    setSuppressSuggestions(true)
+
+    if (!googleApiKey) {
+      setFormData((prev) => ({
+        ...prev,
+        address: suggestion.description,
+      }))
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `https://places.googleapis.com/v1/places/${suggestion.placeId}?fields=location,formattedAddress`,
+        {
+          headers: {
+            'X-Goog-Api-Key': googleApiKey,
+            'X-Goog-FieldMask': 'location,formattedAddress',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        setFormData((prev) => ({
+          ...prev,
+          address: suggestion.description,
+        }))
+        return
+      }
+
+      const data = (await response.json()) as {
+        formattedAddress?: string
+        location?: { latitude?: number; longitude?: number }
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        address: data.formattedAddress || suggestion.description,
+        lat: data.location?.latitude !== undefined ? String(data.location.latitude) : prev.lat,
+        lng: data.location?.longitude !== undefined ? String(data.location.longitude) : prev.lng,
+      }))
+    } catch (error) {
+      console.error(error)
+      setFormData((prev) => ({
+        ...prev,
+        address: suggestion.description,
+      }))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsSaving(true)
 
     try {
-      if (!formData.id || !formData.name || !formData.address) {
-        setError('ID, name, and address are required')
+      if (!formData.name || !formData.address) {
+        setError('Name and address are required')
         setIsSaving(false)
         return
+      }
+
+      const payload = { ...formData }
+      if (!payload.id) {
+        const baseSlug = String(slug || 'resource').trim() || 'resource'
+        payload.id = `${baseSlug}-${Date.now()}`
       }
 
       const res = await fetch(`/api/admin/cities/${slug}/resources`, {
@@ -107,7 +237,7 @@ export default function CityPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
@@ -222,7 +352,16 @@ export default function CityPage() {
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label htmlFor="id">ID *</label>
+              <label htmlFor="id">
+                ID (optional)
+                <span
+                  className={styles.tooltip}
+                  title="Used to match records across imports/exports. Leave blank to auto-generate."
+                  aria-label="Used to match records across imports/exports. Leave blank to auto-generate."
+                >
+                  ?
+                </span>
+              </label>
               <input
                 id="id"
                 name="id"
@@ -230,7 +369,6 @@ export default function CityPage() {
                 value={formData.id || ''}
                 onChange={handleFormChange}
                 placeholder="unique-location-id"
-                required
                 className={styles.input}
                 readOnly={!!editingId}
               />
@@ -262,37 +400,26 @@ export default function CityPage() {
               placeholder="123 Main St, City"
               required
               className={styles.input}
+              autoComplete="off"
             />
-          </div>
-
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label htmlFor="lat">Latitude</label>
-              <input
-                id="lat"
-                name="lat"
-                type="number"
-                step="0.0001"
-                value={formData.lat || ''}
-                onChange={handleFormChange}
-                placeholder="41.5868"
-                className={styles.input}
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="lng">Longitude</label>
-              <input
-                id="lng"
-                name="lng"
-                type="number"
-                step="0.0001"
-                value={formData.lng || ''}
-                onChange={handleFormChange}
-                placeholder="-93.6250"
-                className={styles.input}
-              />
-            </div>
+            {isFetchingSuggestions && (
+              <div className={styles.suggestionHint}>Searching addresses...</div>
+            )}
+            {addressSuggestions.length > 0 && (
+              <ul className={styles.suggestionsList} role="listbox">
+                {addressSuggestions.map((suggestion) => (
+                  <li key={suggestion.placeId}>
+                    <button
+                      type="button"
+                      className={styles.suggestionItem}
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                    >
+                      {suggestion.description}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className={styles.formRow}>

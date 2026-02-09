@@ -220,6 +220,8 @@ type AirtableResourceFields = {
   notes?: string
 }
 
+type GeocodeResult = { lat: number; lng: number }
+
 function getAirtableConfig() {
   const apiKey = process.env.AIRTABLE_API_KEY?.trim()
   const baseId = process.env.AIRTABLE_BASE_ID?.trim()
@@ -231,6 +233,35 @@ function getAirtableConfig() {
   }
 
   return { apiKey, baseId, citiesTable, resourcesTable }
+}
+
+function getGeocodingApiKey() {
+  return (
+    process.env.GOOGLE_GEOCODING_API_KEY?.trim() ||
+    process.env.GOOGLE_MAPS_API_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
+    ''
+  )
+}
+
+async function geocodeAddress(address: string): Promise<GeocodeResult | null> {
+  const apiKey = getGeocodingApiKey()
+  if (!apiKey) return null
+
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+  const response = await fetch(url, { cache: 'no-store' })
+  if (!response.ok) return null
+
+  const data = (await response.json()) as {
+    status?: string
+    results?: Array<{ geometry?: { location?: { lat?: number; lng?: number } } }>
+  }
+
+  if (data.status !== 'OK' || !data.results?.length) return null
+  const location = data.results[0]?.geometry?.location
+  if (typeof location?.lat !== 'number' || typeof location?.lng !== 'number') return null
+
+  return { lat: location.lat, lng: location.lng }
 }
 
 async function fetchAirtableRecords<TFields>(tableName: string, filterByFormula?: string) {
@@ -678,7 +709,7 @@ export async function getResourcesByCityAndType(slug: string, type: ResourceType
 export async function upsertResource(
   slug: string,
   data: {
-    id: string
+    id?: string
     category?: ResourceType
     name: string
     address: string
@@ -695,6 +726,22 @@ export async function upsertResource(
 ) {
   assertValidSlug(slug)
   const category: ResourceType = data.category ?? 'food'
+  const resolvedId = data.id && String(data.id).trim().length > 0
+    ? String(data.id).trim()
+    : `${slug}-${Date.now()}`
+  const rawLat = data.lat ?? null
+  const rawLng = data.lng ?? null
+  let resolvedLat = rawLat
+  let resolvedLng = rawLng
+
+  if ((resolvedLat == null || resolvedLng == null) && data.address) {
+    const geocoded = await geocodeAddress(data.address)
+    if (!geocoded) {
+      throw new Error('Unable to geocode address. Please provide valid coordinates or check the address.')
+    }
+    resolvedLat = geocoded.lat
+    resolvedLng = geocoded.lng
+  }
 
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
@@ -711,15 +758,15 @@ export async function upsertResource(
         cityId_category_externalId: {
           cityId: city.id,
           category: category as ResourceCategory,
-          externalId: data.id,
+          externalId: resolvedId,
         },
       },
       update: {
         category: category as ResourceCategory,
         name: data.name,
         address: data.address,
-        lat: data.lat || null,
-        lng: data.lng || null,
+        lat: resolvedLat ?? null,
+        lng: resolvedLng ?? null,
         hours: data.hours || null,
         daysOpen: data.daysOpen || null,
         phone: data.phone || null,
@@ -729,13 +776,13 @@ export async function upsertResource(
         notes: data.notes || null,
       },
       create: {
-        externalId: data.id,
+        externalId: resolvedId,
         cityId: city.id,
         category: category as ResourceCategory,
         name: data.name,
         address: data.address,
-        lat: data.lat || null,
-        lng: data.lng || null,
+        lat: resolvedLat ?? null,
+        lng: resolvedLng ?? null,
         hours: data.hours || null,
         daysOpen: data.daysOpen || null,
         phone: data.phone || null,
@@ -760,7 +807,7 @@ export async function upsertResource(
 
     // Find and update or add
     // Ensure ID comparison is done on string values, trimmed of whitespace
-    const normalizedId = String(data.id).trim()
+    const normalizedId = resolvedId
     const idx = resources[category].findIndex((r) => String(r.id).trim() === normalizedId)
     
     if (idx >= 0) {
@@ -769,17 +816,17 @@ export async function upsertResource(
         ...resources[category][idx],
         ...data,
         // Explicitly set these to ensure they match the expected types
-        id: data.id,
+        id: resolvedId,
         name: data.name,
         address: data.address,
         lat:
-          data.lat !== null && data.lat !== undefined ? data.lat : resources[category][idx].lat,
+          resolvedLat !== null && resolvedLat !== undefined ? resolvedLat : resources[category][idx].lat,
         lng:
-          data.lng !== null && data.lng !== undefined ? data.lng : resources[category][idx].lng,
+          resolvedLng !== null && resolvedLng !== undefined ? resolvedLng : resources[category][idx].lng,
       }
     } else {
       // Create new resource
-      resources[category].push({ ...data, category: undefined })
+      resources[category].push({ ...data, id: resolvedId, lat: resolvedLat, lng: resolvedLng, category: undefined })
     }
 
     try {
