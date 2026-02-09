@@ -31,6 +31,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify required environment variables
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ] && [ -z "$DIRECT_URL" ]; then
+            echo "Missing DATABASE_URL and DIRECT_URL. Set GitHub secrets (or use Vercel POSTGRES_PRISMA_URL)."
+            exit 1
+          fi
+
       - name: Run type check
         run: npm run build
 
@@ -43,4 +51,6 @@ jobs:
             --env ADMIN_PASSWORD="$ADMIN_PASSWORD" \
             --env DATABASE_URL="$DATABASE_URL" \
             --env DIRECT_URL="$DIRECT_URL" \
-            --build-env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"
+            --build-env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY" \
+            --build-env DATABASE_URL="$DATABASE_URL" \
+            --build-env DIRECT_URL="$DIRECT_URL"

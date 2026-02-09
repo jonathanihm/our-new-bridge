@@ -16,7 +16,9 @@ function getDatabaseUrlCandidate() {
   const raw =
     process.env.DATABASE_URL ??
     process.env.POSTGRES_PRISMA_URL ??
-    process.env.POSTGRES_URL
+    process.env.POSTGRES_URL ??
+    // Some setups only provide DIRECT_URL; treat it as a fallback.
+    process.env.DIRECT_URL
 
   if (!raw) return undefined
   const trimmed = raw.trim()
