@@ -1,7 +1,7 @@
 'use client'
 
 import type { MapResource } from '../types'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api'
 import FoodMapProps from './FoodMapProps'
 
@@ -13,18 +13,17 @@ export default function FoodMap({ resources, selectedResource, onSelectResource,
 
   const { isLoaded, loadError } = useLoadScript({ googleMapsApiKey: apiKey })
 
-  const [activeResource, setActiveResource] = useState<MapResource | null>(selectedResource)
-  useEffect(() => setActiveResource(selectedResource), [selectedResource])
+  const activeResource = selectedResource
 
-  const mapRef = useRef<any>(null)
+  const mapRef = useRef<google.maps.Map | null>(null)
   const mapInitializedRef = useRef(false)
-  const onMapLoad = useCallback((map: any) => {
+  const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map
     // only initialize bounds/center once on first load to avoid recentering on InfoWindow close or small state changes
     if (mapInitializedRef.current) return
     mapInitializedRef.current = true
     if (resources && resources.length > 0) {
-      const g = (window as any).google
+      const g = window.google as typeof google
       const bounds = new g.maps.LatLngBounds()
       resources.forEach(r => {
         const lat = Number(r.lat)
@@ -42,7 +41,6 @@ export default function FoodMap({ resources, selectedResource, onSelectResource,
   }, [resources, cityConfig])
 
   const handleMarkerClick = useCallback((resource: MapResource) => {
-    setActiveResource(resource)
     onSelectResource(resource)
   }, [onSelectResource])
 
@@ -66,10 +64,7 @@ export default function FoodMap({ resources, selectedResource, onSelectResource,
       {activeResource && (
         <InfoWindow
           position={{ lat: Number(activeResource.lat), lng: Number(activeResource.lng) }}
-          onCloseClick={() => {
-            setActiveResource(null)
-            // do NOT call onSelectResource(null) — leave parent/map state alone
-          }}
+          onCloseClick={() => onSelectResource(null)}
         >
           <div style={{ minWidth: 200 }}>
             <strong style={{ color: '#1a73e8' }}>{activeResource.name}</strong>

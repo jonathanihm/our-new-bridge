@@ -135,7 +135,7 @@ export default function ReportIssueModal({ resource, onClose }: ReportIssueModal
           <div className={styles.successMessage}>
             <CheckCircle size={48} />
             <h3>Thank you!</h3>
-            <p>Your report has been submitted. We'll verify this information.</p>
+            <p>Your report has been submitted. We&apos;ll verify this information.</p>
           </div>
         ) : status === 'rate-limited' ? (
           <div className={styles.rateLimitMessage}>
@@ -148,7 +148,7 @@ export default function ReportIssueModal({ resource, onClose }: ReportIssueModal
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formGroup}>
               <label htmlFor="issueType" className={styles.label}>
-                What's the issue?
+                What&apos;s the issue?
               </label>
               <select
                 id="issueType"
@@ -191,7 +191,7 @@ export default function ReportIssueModal({ resource, onClose }: ReportIssueModal
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="If you'd like us to follow up"
+                placeholder="If you&apos;d like us to follow up"
                 className={styles.input}
                 disabled={status === 'submitting'}
               />

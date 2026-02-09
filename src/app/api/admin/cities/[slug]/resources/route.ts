@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
 import { deleteResource, getResourcesByCity, upsertResource } from '@/lib/db-utils'
-import { checkAdminAuth } from '@/lib/admin-auth'
+import { authOptions } from '@/lib/auth'
 
 type ResourceCategory = 'food' | 'shelter' | 'housing' | 'legal'
 
@@ -13,15 +14,9 @@ export async function GET(
   request: NextRequest,
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
-  try {
-    if (!checkAdminAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
-      { status: 500 }
-    )
+  const session = await getServerSession(authOptions)
+  if (session?.user?.name !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -58,7 +53,7 @@ export async function GET(
         notes: r.notes || '',
       })),
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ food: [] })
   }
 }
@@ -67,15 +62,9 @@ export async function POST(
   request: NextRequest,
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
-  try {
-    if (!checkAdminAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
-      { status: 500 }
-    )
+  const session = await getServerSession(authOptions)
+  if (session?.user?.name !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -121,15 +110,9 @@ export async function DELETE(
   request: NextRequest,
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
-  try {
-    if (!checkAdminAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
-      { status: 500 }
-    )
+  const session = await getServerSession(authOptions)
+  if (session?.user?.name !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {

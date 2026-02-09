@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, ResourceCategory } from '@prisma/client'
 import { readdir, readFile, writeFile, rm, unlink } from 'fs/promises'
 import { join } from 'path'
 
@@ -8,6 +8,92 @@ const DATA_DIR = join(process.cwd(), 'data')
 export type ResourceType = 'food' | 'shelter' | 'housing' | 'legal'
 
 const RESOURCE_TYPES: ResourceType[] = ['food', 'shelter', 'housing', 'legal']
+
+type CityConfigJson = {
+  slug?: string
+  city?: {
+    name?: string
+    state?: string
+    fullName?: string
+    tagline?: string
+    description?: string
+  }
+  map?: {
+    centerLat?: number
+    centerLng?: number
+    defaultZoom?: number
+    zoom?: number
+    type?: string
+  }
+  features?: Partial<Record<ResourceType, { enabled?: boolean; title?: string; icon?: string }>>
+  contact?: { email?: string; volunteer?: boolean }
+  branding?: {
+    primaryColor?: string
+    secondaryColor?: string
+    accentColor?: string
+    backgroundColor?: string
+  }
+}
+
+type ResourceJson = {
+  id?: string
+  name?: string
+  address?: string
+  lat?: number | null
+  lng?: number | null
+  hours?: string | null
+  daysOpen?: string | null
+  phone?: string | null
+  website?: string | null
+  requiresId?: boolean
+  walkIn?: boolean
+  notes?: string | null
+  category?: ResourceType
+}
+
+type ResourcesJson = Record<ResourceType, ResourceJson[]>
+
+type CitySummary = {
+  slug: string
+  name: string
+  state: string
+  centerLat: number
+  centerLng: number
+  _count: { resources: number }
+}
+
+type ValidationResult = {
+  city: string
+  slug: string
+  status: 'healthy' | 'warning' | 'error'
+  resourceCount: number
+  configIssues: string[]
+  resourceIssues: string[]
+}
+
+type ExportData = {
+  exportedAt: string
+  cities: Record<string, { config: CityConfigJson; resources: ResourcesJson }>
+}
+
+const emptyResources = (): ResourcesJson => ({
+  food: [],
+  shelter: [],
+  housing: [],
+  legal: [],
+})
+
+const parseResources = (value: unknown): ResourcesJson => {
+  const resources = emptyResources()
+  if (!value || typeof value !== 'object') return resources
+  const candidate = value as Partial<Record<ResourceType, ResourceJson[]>>
+  for (const type of RESOURCE_TYPES) {
+    if (Array.isArray(candidate[type])) {
+      resources[type] = candidate[type] as ResourceJson[]
+    }
+  }
+  return resources
+}
 
 const SLUG_PATTERN = /^[a-z0-9-]{1,64}$/
 
@@ -96,19 +182,19 @@ export async function getCities() {
   } else {
     // JSON-based
     const files = await readdir(CONFIG_DIR)
-    const cities = []
+    const cities: CitySummary[] = []
     for (const file of files) {
       if (!file.endsWith('.json')) continue
       const slug = file.replace('.json', '')
-      const config = JSON.parse(await readFile(join(CONFIG_DIR, file), 'utf-8'))
+      const config = JSON.parse(await readFile(join(CONFIG_DIR, file), 'utf-8')) as CityConfigJson
       
       // Read resources count
       let resourceCount = 0
       try {
-        const resources = JSON.parse(
-          await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8')
+        const resources = parseResources(
+          JSON.parse(await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8'))
         )
-        resourceCount = resources.food?.length || 0
+        resourceCount = resources.food.length
       } catch {}
       
       cities.push({
@@ -137,16 +223,16 @@ export async function getCityBySlug(slug: string) {
 
     // Prisma City model doesn't currently store map type; normalize return shape
     // so callers can rely on `mapType` existing in both DB and JSON modes.
-    const mapType = (city as any).mapType ?? 'google'
+    const mapType = (city as { mapType?: string }).mapType ?? 'google'
     return { ...city, mapType }
   } else {
     // JSON-based
     try {
       const config = JSON.parse(
         await readFile(join(CONFIG_DIR, `${slug}.json`), 'utf-8')
-      )
-      const resources = JSON.parse(
-        await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8')
+      ) as CityConfigJson
+      const resources = parseResources(
+        JSON.parse(await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8'))
       )
       
       return {
@@ -161,7 +247,7 @@ export async function getCityBySlug(slug: string) {
         centerLng: config.map?.centerLng || 0,
         defaultZoom: config.map?.defaultZoom ?? config.map?.zoom ?? 14,
         mapType: config.map?.type || 'google',
-        resources: resources.food?.map((r: any) => ({
+        resources: resources.food.map((r) => ({
           id: r.id,
           externalId: r.id,
           name: r.name,
@@ -172,7 +258,7 @@ export async function getCityBySlug(slug: string) {
           phone: r.phone || '',
           website: r.website || '',
           notes: r.notes || '',
-        })) || [],
+        })),
       }
     } catch {
       return null
@@ -255,7 +341,7 @@ export async function validateConfig() {
       orderBy: { name: 'asc' },
     })
     
-    const results: any[] = []
+    const results: ValidationResult[] = []
     for (const city of cities) {
       const issues: string[] = []
       const resourceIssues: string[] = []
@@ -295,7 +381,7 @@ export async function validateConfig() {
     return { results, errors: [] }
   } else {
     // JSON-based validation
-    const results: any[] = []
+    const results: ValidationResult[] = []
     const errors: string[] = []
     const files = await readdir(CONFIG_DIR)
 
@@ -304,7 +390,7 @@ export async function validateConfig() {
       const cityName = file.replace('.json', '')
 
       try {
-        const config = JSON.parse(await readFile(join(CONFIG_DIR, file), 'utf-8'))
+        const config = JSON.parse(await readFile(join(CONFIG_DIR, file), 'utf-8')) as CityConfigJson
         const issues: string[] = []
 
         if (!config.slug) issues.push('Missing slug')
@@ -312,14 +398,16 @@ export async function validateConfig() {
         if (!config.map?.centerLat) issues.push('Missing map.centerLat')
         if (!config.map?.centerLng) issues.push('Missing map.centerLng')
 
-        let resourceIssues: string[] = []
+        const resourceIssues: string[] = []
         let resourceCount = 0
         try {
-          const resources = JSON.parse(
-            await readFile(join(DATA_DIR, config.slug || cityName, 'resources.json'), 'utf-8')
+          const resources = parseResources(
+            JSON.parse(
+              await readFile(join(DATA_DIR, config.slug || cityName, 'resources.json'), 'utf-8')
+            )
           )
-          resourceCount = resources.food?.length || 0
-          resources.food?.forEach((r: any, idx: number) => {
+          resourceCount = resources.food.length
+          resources.food.forEach((r: ResourceJson, idx: number) => {
             if (!r.id) resourceIssues.push(`Resource ${idx}: missing id`)
             if (!r.name) resourceIssues.push(`Resource ${idx}: missing name`)
             if (!r.address) resourceIssues.push(`Resource ${idx}: missing address`)
@@ -355,15 +443,16 @@ export async function getResourcesByCityAndType(slug: string, type: ResourceType
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
     return await prismaClient.resource.findMany({
-      where: { city: { slug }, category: type as any },
+      where: { city: { slug }, category: type as ResourceCategory },
       orderBy: { createdAt: 'desc' },
     })
   } else {
     // JSON-based
     try {
-      const parsed = JSON.parse(await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8'))
-      const list = parsed?.[type]
-      return Array.isArray(list) ? list : []
+      const parsed = parseResources(
+        JSON.parse(await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8'))
+      )
+      return parsed[type]
     } catch {
       return []
     }
@@ -405,12 +494,12 @@ export async function upsertResource(
       where: {
         cityId_category_externalId: {
           cityId: city.id,
-          category: category as any,
+          category: category as ResourceCategory,
           externalId: data.id,
         },
       },
       update: {
-        category: category as any,
+        category: category as ResourceCategory,
         name: data.name,
         address: data.address,
         lat: data.lat || null,
@@ -426,7 +515,7 @@ export async function upsertResource(
       create: {
         externalId: data.id,
         cityId: city.id,
-        category: category as any,
+        category: category as ResourceCategory,
         name: data.name,
         address: data.address,
         lat: data.lat || null,
@@ -443,15 +532,10 @@ export async function upsertResource(
   } else {
     // JSON-based
     const resourcePath = join(DATA_DIR, slug, 'resources.json')
-    let resources: Record<string, any[]> = { food: [], shelter: [], housing: [], legal: [] }
+    let resources = emptyResources()
 
     try {
-      const parsed = JSON.parse(await readFile(resourcePath, 'utf-8'))
-      if (parsed && typeof parsed === 'object') {
-        for (const t of RESOURCE_TYPES) {
-          if (Array.isArray(parsed[t])) resources[t] = parsed[t]
-        }
-      }
+      resources = parseResources(JSON.parse(await readFile(resourcePath, 'utf-8')))
     } catch {}
 
     if (!Array.isArray(resources[category])) resources[category] = []
@@ -459,12 +543,12 @@ export async function upsertResource(
     // Find and update or add
     // Ensure ID comparison is done on string values, trimmed of whitespace
     const normalizedId = String(data.id).trim()
-    const idx = resources[category].findIndex((r: any) => String(r.id).trim() === normalizedId)
+    const idx = resources[category].findIndex((r) => String(r.id).trim() === normalizedId)
     
     if (idx >= 0) {
       // Update existing resource - preserve all original fields and merge with new data
-      resources[category][idx] = { 
-        ...resources[category][idx], 
+      resources[category][idx] = {
+        ...resources[category][idx],
         ...data,
         // Explicitly set these to ensure they match the expected types
         id: data.id,
@@ -505,7 +589,7 @@ export async function deleteResource(slug: string, id: string, category: Resourc
       where: {
         cityId_category_externalId: {
           cityId: city.id,
-          category: category as any,
+          category: category as ResourceCategory,
           externalId: normalizedId,
         },
       },
@@ -514,21 +598,16 @@ export async function deleteResource(slug: string, id: string, category: Resourc
 
   // JSON-based
   const resourcePath = join(DATA_DIR, slug, 'resources.json')
-  let resources: Record<string, any[]> = { food: [], shelter: [], housing: [], legal: [] }
+  let resources = emptyResources()
 
   try {
-    const parsed = JSON.parse(await readFile(resourcePath, 'utf-8'))
-    if (parsed && typeof parsed === 'object') {
-      for (const t of RESOURCE_TYPES) {
-        if (Array.isArray(parsed[t])) resources[t] = parsed[t]
-      }
-    }
+    resources = parseResources(JSON.parse(await readFile(resourcePath, 'utf-8')))
   } catch {
     // If resources file doesn't exist, treat as empty.
   }
 
   const list = Array.isArray(resources[category]) ? resources[category] : []
-  resources[category] = list.filter((r: any) => String(r?.id ?? '').trim() !== normalizedId)
+  resources[category] = list.filter((r) => String(r?.id ?? '').trim() !== normalizedId)
 
   try {
     await writeFile(resourcePath, JSON.stringify(resources, null, 2))
@@ -550,7 +629,7 @@ export async function exportData() {
       orderBy: { name: 'asc' },
     })
 
-    const backupData: any = {
+    const backupData: ExportData = {
       exportedAt: new Date().toISOString(),
       cities: {},
     }
@@ -562,17 +641,17 @@ export async function exportData() {
 
       // Use on-disk files as a base if they exist, so we preserve fields
       // not currently stored in the database (features, contact, branding, etc.).
-      let configFromDisk: any | null = null
+      let configFromDisk: CityConfigJson | null = null
       try {
         configFromDisk = JSON.parse(
           await readFile(join(CONFIG_DIR, `${city.slug}.json`), 'utf-8')
-        )
+        ) as CityConfigJson
       } catch {}
 
-      let resourcesFromDisk: any | null = null
+      let resourcesFromDisk: ResourcesJson | null = null
       try {
-        resourcesFromDisk = JSON.parse(
-          await readFile(join(DATA_DIR, city.slug, 'resources.json'), 'utf-8')
+        resourcesFromDisk = parseResources(
+          JSON.parse(await readFile(join(DATA_DIR, city.slug, 'resources.json'), 'utf-8'))
         )
       } catch {}
 
@@ -628,23 +707,18 @@ export async function exportData() {
             },
           }
 
-      const resources: any = {
-        food: Array.isArray(resourcesFromDisk?.food) ? resourcesFromDisk.food : [],
-        shelter: Array.isArray(resourcesFromDisk?.shelter) ? resourcesFromDisk.shelter : [],
-        housing: Array.isArray(resourcesFromDisk?.housing) ? resourcesFromDisk.housing : [],
-        legal: Array.isArray(resourcesFromDisk?.legal) ? resourcesFromDisk.legal : [],
-      }
+      const resources: ResourcesJson = resourcesFromDisk ?? emptyResources()
 
       // Merge DB resources into each category array, preserving any extra JSON fields.
       for (const type of RESOURCE_TYPES) {
-        const dbById = new Map<string, any>()
+        const dbById = new Map<string, typeof city.resources[number]>()
         for (const r of city.resources) {
-          const cat = String((r as any).category ?? 'food') as ResourceType
+          const cat = String(r.category ?? 'food') as ResourceType
           if (cat !== type) continue
           dbById.set(String(r.externalId), r)
         }
 
-        const merged: any[] = []
+        const merged: ResourceJson[] = []
         const usedDbIds = new Set<string>()
 
         const existingList = Array.isArray(resources[type]) ? resources[type] : []
@@ -675,7 +749,7 @@ export async function exportData() {
         }
 
         for (const r of city.resources) {
-          const cat = String((r as any).category ?? 'food') as ResourceType
+          const cat = String(r.category ?? 'food') as ResourceType
           if (cat !== type) continue
           const id = String(r.externalId)
           if (usedDbIds.has(id)) continue
@@ -706,7 +780,7 @@ export async function exportData() {
     return backupData
   } else {
     // JSON-based export
-    const backupData: any = {
+    const backupData: ExportData = {
       exportedAt: new Date().toISOString(),
       cities: {},
     }
@@ -717,11 +791,11 @@ export async function exportData() {
       const slug = file.replace('.json', '')
 
       try {
-        const config = JSON.parse(await readFile(join(CONFIG_DIR, file), 'utf-8'))
-        let resources = { food: [] }
+        const config = JSON.parse(await readFile(join(CONFIG_DIR, file), 'utf-8')) as CityConfigJson
+        let resources = emptyResources()
         try {
-          resources = JSON.parse(
-            await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8')
+          resources = parseResources(
+            JSON.parse(await readFile(join(DATA_DIR, slug, 'resources.json'), 'utf-8'))
           )
         } catch {}
 

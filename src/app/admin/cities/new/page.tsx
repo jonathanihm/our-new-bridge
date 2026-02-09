@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import styles from '../../admin.module.css'
@@ -18,12 +19,13 @@ export default function NewCityPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { status } = useSession()
 
   useEffect(() => {
-    if (!sessionStorage.getItem('adminToken')) {
+    if (status === 'unauthenticated') {
       router.push('/admin')
     }
-  }, [router])
+  }, [router, status])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -39,8 +41,6 @@ export default function NewCityPage() {
     setIsLoading(true)
 
     try {
-      const token = sessionStorage.getItem('adminToken')
-
       if (!formData.slug || !formData.name || !formData.centerLat || !formData.centerLng) {
         setError('All required fields must be filled')
         setIsLoading(false)
@@ -51,7 +51,6 @@ export default function NewCityPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           slug: formData.slug.toLowerCase().replace(/\s+/g, '-'),

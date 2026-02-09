@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { redirect } from 'next/navigation'
 import FoodPageClient from '../food/FoodPageClient'
+import type { CityConfig, MapResource } from '@/types'
 
 const CONFIG_DIR = join(process.cwd(), 'config', 'cities')
 
@@ -30,17 +31,46 @@ function defaultTitles(type: ResourceType) {
   }
 }
 
-async function getCityConfigFromDisk(slug: string): Promise<any | null> {
+type CityParams = { city?: string; type?: string }
+type CityOption = { slug: string; name: string }
+type CityConfigFile = Partial<CityConfig> & {
+  slug?: string
+  city?: {
+    name?: string
+    state?: string
+    fullName?: string
+    tagline?: string
+    description?: string
+  }
+  map?: CityConfig['map'] & { zoom?: number }
+}
+type ResourceLike = {
+  id?: string
+  externalId?: string
+  name?: string
+  address?: string
+  lat?: number | null
+  lng?: number | null
+  hours?: string | null
+  daysOpen?: string | null
+  phone?: string | null
+  website?: string | null
+  notes?: string | null
+  requiresId?: boolean | null
+  walkIn?: boolean | null
+}
+
+async function getCityConfigFromDisk(slug: string): Promise<CityConfigFile | null> {
   if (!isValidSlug(slug)) return null
   try {
     const raw = await readFile(join(CONFIG_DIR, `${slug}.json`), 'utf-8')
-    return JSON.parse(raw)
+    return JSON.parse(raw) as CityConfigFile
   } catch {
     return null
   }
 }
 
-export default async function Page({ params }: { params: any }) {
+export default async function Page({ params }: { params: Promise<CityParams> }) {
   const { city, type } = await params
   if (!city) return redirect('/des-moines/food')
   if (!isValidSlug(String(city))) return redirect('/des-moines/food')
@@ -70,7 +100,7 @@ export default async function Page({ params }: { params: any }) {
     pageTitle: feature?.title || defaultTitles(requestedType).pageTitle,
   }
 
-  const cityConfig = {
+  const cityConfig: CityConfig = {
     slug: cityData.slug,
     city: {
       name: cityData.name,
@@ -88,12 +118,12 @@ export default async function Page({ params }: { params: any }) {
 
   const rawResources = await getResourcesByCityAndType(city, requestedType)
 
-  const resources = {
+  const resources: Partial<Record<ResourceType, MapResource[]>> = {
     [requestedType]: Array.isArray(rawResources)
-      ? rawResources.map((r: any) => ({
-          id: r.id || r.externalId,
-          name: r.name,
-          address: r.address,
+      ? (rawResources as ResourceLike[]).map((r) => ({
+          id: r.id || r.externalId || '',
+          name: r.name || '',
+          address: r.address || '',
           lat: r.lat,
           lng: r.lng,
           hours: r.hours || '',
@@ -112,7 +142,7 @@ export default async function Page({ params }: { params: any }) {
       cityConfig={cityConfig}
       resources={resources}
       slug={city}
-      cities={(cities || []).map((c: any) => ({ slug: c.slug, name: c.name }))}
+      cities={(cities as CityOption[] | undefined || []).map((c) => ({ slug: c.slug, name: c.name }))}
       resourceType={requestedType}
       pageTitle={titles.pageTitle}
       listTitle={titles.listTitle}

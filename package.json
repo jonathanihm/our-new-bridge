@@ -11,13 +11,14 @@
     "migrate:json": "dotenv -e .env.local -- ts-node prisma/migrate-from-json.ts",
     "start": "next start",
     "lint": "eslint",
-    "validate": "node scripts/validate-config.js"
+    "validate": "node scripts/validate-config.mjs"
   },
   "dependencies": {
     "@prisma/client": "4.16.2",
     "@react-google-maps/api": "^2.20.8",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.563.0",
+    "next-auth": "^4.24.7",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

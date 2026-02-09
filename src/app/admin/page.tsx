@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn, useSession } from 'next-auth/react'
 import { Lock, AlertCircle } from 'lucide-react'
 import styles from './admin.module.css'
 
@@ -10,20 +11,37 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { status } = useSession()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/admin/dashboard')
+    }
+  }, [router, status])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
 
-    // Store password in sessionStorage (not ideal but simple for MVP)
-    if (password) {
-      sessionStorage.setItem('adminToken', password)
-      router.push('/admin/dashboard')
-    } else {
+    if (!password) {
       setError('Please enter a password')
       setIsLoading(false)
+      return
     }
+
+    const result = await signIn('credentials', {
+      password,
+      redirect: false,
+    })
+
+    if (result?.error) {
+      setError('Invalid password')
+      setIsLoading(false)
+      return
+    }
+
+    router.push('/admin/dashboard')
   }
 
   return (

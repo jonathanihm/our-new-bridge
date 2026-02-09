@@ -1,17 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
 import { exportData } from '@/lib/db-utils'
-import { checkAdminAuth } from '@/lib/admin-auth'
+import { authOptions } from '@/lib/auth'
 
-export async function GET(request: NextRequest) {
-  try {
-    if (!checkAdminAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
-      { status: 500 }
-    )
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (session?.user?.name !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ArrowLeft, AlertCircle, Trash2 } from 'lucide-react'
 import styles from '../../admin.module.css'
@@ -43,33 +44,33 @@ export default function CityPage() {
   const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null)
   const [isDeletingResource, setIsDeletingResource] = useState(false)
   const router = useRouter()
+  const { status } = useSession()
 
-  useEffect(() => {
-    const token = sessionStorage.getItem('adminToken')
-    if (!token) {
-      router.push('/admin')
-      return
-    }
-    fetchResources()
-  }, [slug, router])
-
-  const fetchResources = async () => {
+  const fetchResources = useCallback(async () => {
     try {
-      const token = sessionStorage.getItem('adminToken')
-      const res = await fetch(`/api/admin/cities/${slug}/resources`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(`/api/admin/cities/${slug}/resources`)
 
       if (res.ok) {
         const data = await res.json()
         setResources(data.food || [])
       }
-    } catch (err) {
+    } catch (error) {
+      console.error(error)
       setError('Failed to load resources')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [slug])
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/admin')
+      return
+    }
+    if (status === 'authenticated') {
+      fetchResources()
+    }
+  }, [fetchResources, router, status])
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const target = e.target
@@ -95,8 +96,6 @@ export default function CityPage() {
     setIsSaving(true)
 
     try {
-      const token = sessionStorage.getItem('adminToken')
-
       if (!formData.id || !formData.name || !formData.address) {
         setError('ID, name, and address are required')
         setIsSaving(false)
@@ -107,7 +106,6 @@ export default function CityPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       })
@@ -132,8 +130,8 @@ export default function CityPage() {
         walkIn: false,
         notes: '',
       })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save resource')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to save resource')
     } finally {
       setIsSaving(false)
     }
@@ -168,18 +166,15 @@ export default function CityPage() {
     setError('')
 
     try {
-      const token = sessionStorage.getItem('adminToken')
       const res = await fetch(`/api/admin/cities/${slug}/resources`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ id: resourceToDelete.id }),
       })
 
       if (res.status === 401) {
-        sessionStorage.removeItem('adminToken')
         router.push('/admin')
         return
       }
@@ -194,8 +189,8 @@ export default function CityPage() {
         handleCancel()
       }
       await fetchResources()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete resource')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete resource')
     } finally {
       setIsDeletingResource(false)
     }

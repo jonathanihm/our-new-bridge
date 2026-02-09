@@ -96,6 +96,7 @@ export interface CityConfig {
     centerLng: number
     defaultZoom: number
     googleApiKey?: string
+    type?: string
     bounds?: {
       north: number
       south: number
@@ -103,23 +104,25 @@ export interface CityConfig {
       west: number
     }
   }
-  features: {
+  features?: {
     food: FeatureConfig
     shelter: FeatureConfig
     housing: FeatureConfig
     legal: FeatureConfig
   }
-  contact: {
+  contact?: {
     email: string
     volunteer: boolean
   }
-  branding: {
+  branding?: {
     primaryColor: string
     secondaryColor: string
     accentColor: string
     backgroundColor: string
   }
   city?: {
+    name?: string
+    state?: string
     fullName?: string
     tagline?: string
     description?: string

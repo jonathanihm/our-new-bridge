@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import styles from '../admin.module.css'
@@ -20,25 +21,13 @@ export default function ValidatePage() {
   const [errors, setErrors] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const { status } = useSession()
 
-  useEffect(() => {
-    const token = sessionStorage.getItem('adminToken')
-    if (!token) {
-      router.push('/admin')
-      return
-    }
-    validate()
-  }, [router])
-
-  const validate = async () => {
+  const validate = useCallback(async () => {
     try {
-      const token = sessionStorage.getItem('adminToken')
-      const res = await fetch('/api/admin/validate', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch('/api/admin/validate')
 
       if (res.status === 401) {
-        sessionStorage.removeItem('adminToken')
         router.push('/admin')
         return
       }
@@ -46,12 +35,22 @@ export default function ValidatePage() {
       const data = await res.json()
       setResults(data.results || [])
       setErrors(data.errors || [])
-    } catch (err) {
-      console.error('Validation failed:', err)
+    } catch (error) {
+      console.error('Validation failed:', error)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/admin')
+      return
+    }
+    if (status === 'authenticated') {
+      validate()
+    }
+  }, [router, status, validate])
 
   if (isLoading) {
     return (

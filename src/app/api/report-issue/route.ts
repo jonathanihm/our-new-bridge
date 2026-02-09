@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
 export const runtime = 'nodejs'
+type ReportData = {
+  resourceId: string
+  resourceName?: string
+  resourceAddress?: string
+  issueType: string
+  description: string
+  reporterEmail: string
+  timestamp?: string | number
+}
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
 const RATE_LIMIT_MAX = 5
@@ -9,7 +18,8 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
 
 function getClientKey(request: NextRequest) {
   const forwarded = request.headers.get('x-forwarded-for')
-  const ip = forwarded?.split(',')[0].trim() || request.ip || 'unknown'
+  const realIp = request.headers.get('x-real-ip')
+  const ip = forwarded?.split(',')[0].trim() || realIp || 'unknown'
   return ip
 }
 
@@ -62,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Format the report data
-    const reportData = {
+    const reportData: ReportData = {
       resourceId,
       resourceName,
       resourceAddress,
@@ -139,7 +149,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to format email (if using email option)
-function formatReportEmail(data: any): string {
+function formatReportEmail(data: ReportData): string {
   return `
 New Resource Issue Report
 
@@ -153,7 +163,7 @@ Details:
 ${data.description}
 
 Reporter Email: ${data.reporterEmail}
-Submitted: ${new Date(data.timestamp).toLocaleString()}
+Submitted: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Not provided'}
 
 ---
 Action needed: Please verify this information and update the resource listing if needed.

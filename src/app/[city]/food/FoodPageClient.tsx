@@ -7,14 +7,14 @@ import { MapPin, Clock, Phone, Info, Navigation, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import styles from './food.module.css'
-import type { MapResource, ResourceType } from '../../../../types'
+import type { CityConfig, MapResource, ResourceType } from '../../../../types'
+import type FoodMapProps from '../../../../components/FoodMapProps'
 import ReportIssueButton from '@/components/ReportIssueButton/ReportIssueButton'
 
-const googleFoodMapComponent = '../../../../components/FoodMap';
-const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet';
+const googleFoodMapComponent = '../../../../components/FoodMap'
 
 // Change line below to use either google maps or leaflet map component
-const MapComponent = dynamic<any>(
+const MapComponent = dynamic<FoodMapProps>(
   () => import(googleFoodMapComponent).then((mod) => mod.default),
   {
     ssr: false,
@@ -23,6 +23,8 @@ const MapComponent = dynamic<any>(
 )
 
 type CityOption = { slug: string; name: string }
+
+type ResourcesByType = Partial<Record<ResourceType, MapResource[]>>
 
 export default function FoodPageClient({
   cityConfig,
@@ -33,21 +35,20 @@ export default function FoodPageClient({
   pageTitle = 'Find Free Food',
   listTitle = 'All Food Resources',
 }: {
-  cityConfig: any
-  resources: Record<string, any>
+  cityConfig: CityConfig
+  resources: ResourcesByType
   slug: string
   cities?: CityOption[]
   resourceType?: ResourceType
   pageTitle?: string
   listTitle?: string
 }) {
-  const normalizedType: ResourceType = (resourceType as ResourceType) || 'food'
+  const normalizedType: ResourceType = resourceType || 'food'
   const router = useRouter()
 
   const [selectedResource, setSelectedResource] = useState<MapResource | null>(null)
-  const typedResources = resources as Record<string, any>
-  const resourceList: MapResource[] = Array.isArray(typedResources?.[normalizedType])
-    ? typedResources[normalizedType]
+  const resourceList: MapResource[] = Array.isArray(resources?.[normalizedType])
+    ? resources[normalizedType] ?? []
     : []
 
   const handleGetDirections = (resource: MapResource) => {

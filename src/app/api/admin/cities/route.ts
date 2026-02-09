@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
 import { getCities, createCity, deleteCity } from '@/lib/db-utils'
-import { checkAdminAuth } from '@/lib/admin-auth'
+import { authOptions } from '@/lib/auth'
 
-export async function GET(request: NextRequest) {
-  try {
-    if (!checkAdminAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
-      { status: 500 }
-    )
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (session?.user?.name !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -44,15 +39,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    if (!checkAdminAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
-      { status: 500 }
-    )
+  const session = await getServerSession(authOptions)
+  if (session?.user?.name !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -84,15 +73,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  try {
-    if (!checkAdminAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
-      { status: 500 }
-    )
+  const session = await getServerSession(authOptions)
+  if (session?.user?.name !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {

@@ -1,8 +1,27 @@
 import { getCityBySlug, getCities } from '@/lib/db-utils'
 import { redirect } from 'next/navigation'
+import type { CityConfig, MapResource, ResourceType } from '@/types'
 import FoodPageClient from './FoodPageClient'
 
-export default async function Page({ params }: { params: any }) {
+type CityParams = { city?: string }
+type CityOption = { slug: string; name: string }
+type ResourceLike = {
+  id?: string
+  externalId?: string
+  name?: string
+  address?: string
+  lat?: number | null
+  lng?: number | null
+  hours?: string | null
+  daysOpen?: string | null
+  phone?: string | null
+  website?: string | null
+  notes?: string | null
+  requiresId?: boolean | null
+  walkIn?: boolean | null
+}
+
+export default async function Page({ params }: { params: Promise<CityParams> }) {
   const { city } = await params
   if (!city) return redirect('/des-moines/food')
 
@@ -15,7 +34,7 @@ export default async function Page({ params }: { params: any }) {
   const cities = await getCities()
 
   // Transform to match the existing page props
-  const cityConfig = {
+  const cityConfig: CityConfig = {
     slug: cityData.slug,
     city: {
       name: cityData.name,
@@ -31,12 +50,12 @@ export default async function Page({ params }: { params: any }) {
     },
   }
 
-  const resources = {
+  const resources: Partial<Record<ResourceType, MapResource[]>> = {
     food: Array.isArray(cityData.resources)
-      ? cityData.resources.map((r: any) => ({
-          id: r.id || r.externalId,
-          name: r.name,
-          address: r.address,
+      ? (cityData.resources as ResourceLike[]).map((r) => ({
+          id: r.id || r.externalId || '',
+          name: r.name || '',
+          address: r.address || '',
           lat: r.lat,
           lng: r.lng,
           hours: r.hours || '',
@@ -55,7 +74,7 @@ export default async function Page({ params }: { params: any }) {
       cityConfig={cityConfig}
       resources={resources}
       slug={city}
-      cities={(cities || []).map((c: any) => ({ slug: c.slug, name: c.name }))}
+      cities={(cities as CityOption[] | undefined || []).map((c) => ({ slug: c.slug, name: c.name }))}
       resourceType="food"
       pageTitle="Find Free Food"
       listTitle="All Food Resources"

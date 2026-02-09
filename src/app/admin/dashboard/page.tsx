@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Plus, Eye, Download, LogOut, AlertCircle, CheckCircle, Trash2 } from 'lucide-react'
 import styles from '../admin.module.css'
@@ -20,49 +21,44 @@ export default function AdminDashboard() {
   const [cityToDelete, setCityToDelete] = useState<City | null>(null)
   const [isDeletingCity, setIsDeletingCity] = useState(false)
   const router = useRouter()
+  const { status } = useSession()
 
-  useEffect(() => {
-    const token = sessionStorage.getItem('adminToken')
-    if (!token) {
-      router.push('/admin')
-      return
-    }
-    fetchCities()
-  }, [router])
-
-  const fetchCities = async () => {
+  const fetchCities = useCallback(async () => {
     try {
-      const token = sessionStorage.getItem('adminToken')
-      const res = await fetch('/api/admin/cities', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch('/api/admin/cities')
 
       if (res.status === 401) {
-        sessionStorage.removeItem('adminToken')
         router.push('/admin')
         return
       }
 
       const data = await res.json()
       setCities(data)
-    } catch (err) {
+    } catch (error) {
+      console.error(error)
       setError('Failed to load cities')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/admin')
+      return
+    }
+    if (status === 'authenticated') {
+      fetchCities()
+    }
+  }, [fetchCities, router, status])
 
   const handleLogout = () => {
-    sessionStorage.removeItem('adminToken')
-    router.push('/admin')
+    signOut({ callbackUrl: '/admin' })
   }
 
   const handleExport = async () => {
     try {
-      const token = sessionStorage.getItem('adminToken')
-      const res = await fetch('/api/admin/export', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch('/api/admin/export')
 
       if (res.ok) {
         const blob = await res.blob()
@@ -72,7 +68,8 @@ export default function AdminDashboard() {
         a.download = `backup-${new Date().toISOString().split('T')[0]}.json`
         a.click()
       }
-    } catch (err) {
+    } catch (error) {
+      console.error(error)
       setError('Failed to export data')
     }
   }
@@ -84,18 +81,15 @@ export default function AdminDashboard() {
     setError('')
 
     try {
-      const token = sessionStorage.getItem('adminToken')
       const res = await fetch('/api/admin/cities', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ slug: cityToDelete.slug }),
       })
 
       if (res.status === 401) {
-        sessionStorage.removeItem('adminToken')
         router.push('/admin')
         return
       }
@@ -107,8 +101,8 @@ export default function AdminDashboard() {
 
       setCityToDelete(null)
       await fetchCities()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete city')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete city')
     } finally {
       setIsDeletingCity(false)
     }

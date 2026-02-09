@@ -20,8 +20,6 @@ export default function HomeClient(props: {
   const initialSlug = options.find((c) => c.slug === props.defaultCitySlug)?.slug ?? options[0]?.slug ?? ''
   const [selectedSlug, setSelectedSlug] = useState<string>(initialSlug)
 
-  const selectedCityName = options.find((c) => c.slug === selectedSlug)?.name
-
   return (
     <>
       {options.length > 0 && (

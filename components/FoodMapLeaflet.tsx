@@ -17,7 +17,7 @@ function FitBounds({ resources, center, zoom }: { resources: MapResource[]; cent
         .map((r) => [Number(r.lat), Number(r.lng)] as [number, number])
         .filter(([lat, lng]) => !Number.isNaN(lat) && !Number.isNaN(lng))
       if (pts.length > 0) {
-        const bounds = L.latLngBounds(pts as any)
+        const bounds = L.latLngBounds(pts)
         if (bounds.isValid()) {
           map.fitBounds(bounds, { padding: [20, 20] })
           return
@@ -29,7 +29,7 @@ function FitBounds({ resources, center, zoom }: { resources: MapResource[]; cent
   return null
 }
 
-export default function FoodMapLeaflet({ resources, selectedResource, onSelectResource, cityConfig }: FoodMapProps) {
+export default function FoodMapLeaflet({ resources, onSelectResource, cityConfig }: FoodMapProps) {
   const center: [number, number] = [cityConfig.map.centerLat, cityConfig.map.centerLng]
   const zoom = cityConfig.map.defaultZoom
 
