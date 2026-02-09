@@ -129,6 +129,24 @@ function getDatabaseUrlCandidate() {
   return unquoted.length ? unquoted : undefined
 }
 
+function readUseDatabaseOverride() {
+  const raw = process.env.USE_DATABASE
+  if (!raw) return undefined
+  const normalized = raw.trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  return undefined
+}
+
+function readUseAirtableOverride() {
+  const raw = process.env.USE_AIRTABLE
+  if (!raw) return undefined
+  const normalized = raw.trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  return undefined
+}
+
 // Check if we have a valid Postgres URL (postgresql:// or postgres://)
 const isValidDatabaseUrl = (url: string | undefined) => {
   if (!url) return false
@@ -141,7 +159,15 @@ const isValidDatabaseUrl = (url: string | undefined) => {
 }
 
 const resolvedDatabaseUrl = getDatabaseUrlCandidate()
-export const USE_DATABASE = isValidDatabaseUrl(resolvedDatabaseUrl)
+const useDatabaseOverride = readUseDatabaseOverride()
+const useAirtableOverride = readUseAirtableOverride()
+export const USE_AIRTABLE = typeof useAirtableOverride === 'boolean' ? useAirtableOverride : false
+export const USE_DATABASE =
+  typeof useDatabaseOverride === 'boolean'
+    ? useDatabaseOverride
+    : USE_AIRTABLE
+      ? false
+      : isValidDatabaseUrl(resolvedDatabaseUrl)
 
 // Ensure Prisma reads the resolved DB URL even if the host uses a different env var name.
 if (USE_DATABASE && resolvedDatabaseUrl && process.env.DATABASE_URL !== resolvedDatabaseUrl) {
@@ -162,6 +188,128 @@ function jsonWriteNotSupportedMessage() {
   )
 }
 
+function airtableWriteNotSupportedMessage() {
+  return 'This deployment is running in Airtable mode. Edit data in Airtable instead of the admin UI.'
+}
+
+type AirtableRecord<TFields> = { id: string; fields: TFields }
+type AirtableResponse<TFields> = { records: AirtableRecord<TFields>[]; offset?: string }
+
+type AirtableCityFields = {
+  slug?: string
+  name?: string
+  state?: string
+  fullName?: string
+  tagline?: string
+  description?: string
+  centerLat?: number
+  centerLng?: number
+  defaultZoom?: number
+  mapType?: string
+}
+
+type AirtableResourceFields = {
+  externalId?: string
+  citySlug?: string
+  category?: ResourceType
+  name?: string
+  address?: string
+  lat?: number
+  lng?: number
+  hours?: string
+  daysOpen?: string
+  phone?: string
+  website?: string
+  requiresId?: boolean
+  walkIn?: boolean
+  notes?: string
+}
+
+function getAirtableConfig() {
+  const apiKey = process.env.AIRTABLE_API_KEY?.trim()
+  const baseId = process.env.AIRTABLE_BASE_ID?.trim()
+  const citiesTable = process.env.AIRTABLE_CITIES_TABLE?.trim() || 'Cities'
+  const resourcesTable = process.env.AIRTABLE_RESOURCES_TABLE?.trim() || 'Resources'
+
+  if (!apiKey || !baseId) {
+    throw new Error('AIRTABLE_API_KEY and AIRTABLE_BASE_ID must be set for Airtable mode')
+  }
+
+  return { apiKey, baseId, citiesTable, resourcesTable }
+}
+
+async function fetchAirtableRecords<TFields>(tableName: string, filterByFormula?: string) {
+  const { apiKey, baseId } = getAirtableConfig()
+  const records: AirtableRecord<TFields>[] = []
+  let offset: string | undefined
+
+  do {
+    const params = new URLSearchParams()
+    if (filterByFormula) params.set('filterByFormula', filterByFormula)
+    if (offset) params.set('offset', offset)
+    const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?${params}`
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      throw new Error(`Airtable request failed (${response.status}) for ${tableName}`)
+    }
+
+    const data = (await response.json()) as AirtableResponse<TFields>
+    records.push(...data.records)
+    offset = data.offset
+  } while (offset)
+
+  return records
+}
+
+async function fetchAirtableCities() {
+  const { citiesTable } = getAirtableConfig()
+  const records = await fetchAirtableRecords<AirtableCityFields>(citiesTable)
+  return records.map((record) => ({
+    slug: record.fields.slug || '',
+    name: record.fields.name || '',
+    state: record.fields.state || '',
+    fullName: record.fields.fullName || '',
+    tagline: record.fields.tagline || 'Find help. Fast.',
+    description: record.fields.description || 'A simple, humane platform for finding essential resources',
+    centerLat: Number(record.fields.centerLat || 0),
+    centerLng: Number(record.fields.centerLng || 0),
+    defaultZoom: Number(record.fields.defaultZoom || 12),
+    mapType: record.fields.mapType || 'google',
+  }))
+}
+
+async function fetchAirtableResourcesByCity(slug: string, type?: ResourceType) {
+  const { resourcesTable } = getAirtableConfig()
+  const formulaParts = [`{citySlug} = "${slug}"`]
+  if (type) {
+    formulaParts.push(`{category} = "${type}"`)
+  }
+  const formula = `AND(${formulaParts.join(',')})`
+  const records = await fetchAirtableRecords<AirtableResourceFields>(resourcesTable, formula)
+
+  return records.map((record) => ({
+    id: record.fields.externalId || record.id,
+    externalId: record.fields.externalId || record.id,
+    name: record.fields.name || '',
+    address: record.fields.address || '',
+    lat: record.fields.lat ?? null,
+    lng: record.fields.lng ?? null,
+    hours: record.fields.hours || '',
+    daysOpen: record.fields.daysOpen || '',
+    phone: record.fields.phone || '',
+    website: record.fields.website || '',
+    requiresId: record.fields.requiresId || false,
+    walkIn: record.fields.walkIn || false,
+    notes: record.fields.notes || '',
+    category: (record.fields.category || 'food') as ResourceType,
+  }))
+}
+
 let prisma: PrismaClient | null = null
 
 export function getPrismaClient() {
@@ -179,6 +327,16 @@ export async function getCities() {
       include: { resources: true },
       orderBy: { name: 'asc' },
     })
+  } else if (USE_AIRTABLE) {
+    const cities = await fetchAirtableCities()
+    return cities.map((city) => ({
+      slug: city.slug,
+      name: city.name,
+      state: city.state || '',
+      centerLat: city.centerLat,
+      centerLng: city.centerLng,
+      _count: { resources: 0 },
+    }))
   } else {
     // JSON-based
     const files = await readdir(CONFIG_DIR)
@@ -225,6 +383,26 @@ export async function getCityBySlug(slug: string) {
     // so callers can rely on `mapType` existing in both DB and JSON modes.
     const mapType = (city as { mapType?: string }).mapType ?? 'google'
     return { ...city, mapType }
+  } else if (USE_AIRTABLE) {
+    const cities = await fetchAirtableCities()
+    const city = cities.find((c) => c.slug === slug)
+    if (!city) return null
+
+    const resources = await fetchAirtableResourcesByCity(slug, 'food')
+
+    return {
+      slug: city.slug,
+      name: city.name,
+      state: city.state || '',
+      fullName: city.fullName || '',
+      tagline: city.tagline || 'Find help. Fast.',
+      description: city.description || 'A simple, humane platform for finding essential resources',
+      centerLat: city.centerLat || 0,
+      centerLng: city.centerLng || 0,
+      defaultZoom: city.defaultZoom || 12,
+      mapType: city.mapType || 'google',
+      resources,
+    }
   } else {
     // JSON-based
     try {
@@ -277,6 +455,8 @@ export async function createCity(data: {
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
     return await prismaClient.city.create({ data })
+  } else if (USE_AIRTABLE) {
+    throw new Error(airtableWriteNotSupportedMessage())
   } else {
     // JSON-based
     const config = {
@@ -307,6 +487,8 @@ export async function deleteCity(slug: string) {
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
     return await prismaClient.city.delete({ where: { slug } })
+  } else if (USE_AIRTABLE) {
+    throw new Error(airtableWriteNotSupportedMessage())
   }
 
   // JSON-based
@@ -379,6 +561,43 @@ export async function validateConfig() {
       })
     }
     return { results, errors: [] }
+  } else if (USE_AIRTABLE) {
+    const results: ValidationResult[] = []
+    const errors: string[] = []
+
+    try {
+      const cities = await fetchAirtableCities()
+      for (const city of cities) {
+        const issues: string[] = []
+        const resourceIssues: string[] = []
+
+        if (!city.slug) issues.push('Missing slug')
+        if (!city.name) issues.push('Missing name')
+        if (!city.centerLat) issues.push('Missing centerLat')
+        if (!city.centerLng) issues.push('Missing centerLng')
+
+        const resources = await fetchAirtableResourcesByCity(city.slug || '', 'food')
+        resources.forEach((r, idx) => {
+          if (!r.externalId) resourceIssues.push(`Resource ${idx}: missing id`)
+          if (!r.name) resourceIssues.push(`Resource ${idx}: missing name`)
+          if (!r.address) resourceIssues.push(`Resource ${idx}: missing address`)
+          if (!r.lat || !r.lng) resourceIssues.push(`Resource ${idx}: missing coordinates`)
+        })
+
+        results.push({
+          city: city.name,
+          slug: city.slug,
+          status: issues.length === 0 && resourceIssues.length === 0 ? 'healthy' : 'warning',
+          resourceCount: resources.length,
+          configIssues: issues,
+          resourceIssues,
+        })
+      }
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : 'Unknown error')
+    }
+
+    return { results, errors }
   } else {
     // JSON-based validation
     const results: ValidationResult[] = []
@@ -446,6 +665,8 @@ export async function getResourcesByCityAndType(slug: string, type: ResourceType
       where: { city: { slug }, category: type as ResourceCategory },
       orderBy: { createdAt: 'desc' },
     })
+  } else if (USE_AIRTABLE) {
+    return await fetchAirtableResourcesByCity(slug, type)
   } else {
     // JSON-based
     try {
@@ -529,6 +750,8 @@ export async function upsertResource(
         notes: data.notes || null,
       },
     })
+  } else if (USE_AIRTABLE) {
+    throw new Error(airtableWriteNotSupportedMessage())
   } else {
     // JSON-based
     const resourcePath = join(DATA_DIR, slug, 'resources.json')
@@ -594,6 +817,8 @@ export async function deleteResource(slug: string, id: string, category: Resourc
         },
       },
     })
+  } else if (USE_AIRTABLE) {
+    throw new Error(airtableWriteNotSupportedMessage())
   }
 
   // JSON-based
@@ -777,6 +1002,55 @@ export async function exportData() {
         resources,
       }
     }
+    return backupData
+  } else if (USE_AIRTABLE) {
+    const backupData: ExportData = {
+      exportedAt: new Date().toISOString(),
+      cities: {},
+    }
+
+    const cities = await fetchAirtableCities()
+    for (const city of cities) {
+      const config: CityConfigJson = {
+        slug: city.slug,
+        city: {
+          name: city.name,
+          state: city.state || '',
+          fullName: city.fullName || '',
+          tagline: city.tagline || 'Find help. Fast.',
+          description:
+            city.description || 'A simple, humane platform for finding essential resources',
+        },
+        map: {
+          centerLat: city.centerLat,
+          centerLng: city.centerLng,
+          defaultZoom: city.defaultZoom || 12,
+          type: city.mapType || 'google',
+        },
+      }
+
+      const resources = emptyResources()
+      for (const type of RESOURCE_TYPES) {
+        const list = await fetchAirtableResourcesByCity(city.slug, type)
+        resources[type] = list.map((r) => ({
+          id: r.externalId || r.id,
+          name: r.name,
+          address: r.address,
+          lat: r.lat,
+          lng: r.lng,
+          hours: r.hours || '',
+          daysOpen: r.daysOpen || '',
+          phone: r.phone || '',
+          website: r.website || '',
+          requiresId: r.requiresId || false,
+          walkIn: r.walkIn || false,
+          notes: r.notes || '',
+        }))
+      }
+
+      backupData.cities[city.slug] = { config, resources }
+    }
+
     return backupData
   } else {
     // JSON-based export

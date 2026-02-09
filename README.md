@@ -147,3 +147,65 @@ Update `.env.local` in the project root and add your Google Maps key
 The server loader in `src/app/[city]/food/page.tsx` will automatically use the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
 If you are going to use GitHub, please create a secret with the same secret name
+
+Airtable setup (optional)
+-------------------------
+
+Use Airtable as a read-only data source for public pages (admin edits happen in Airtable).
+
+Step 1: Create a base and tables
+
+1. Create a new Airtable base.
+2. Add a table named `Cities` with these fields:
+  - `slug` (single line text)
+  - `name` (single line text)
+  - `state` (single line text)
+  - `fullName` (single line text)
+  - `tagline` (single line text)
+  - `description` (long text)
+  - `centerLat` (number, precision 6)
+  - `centerLng` (number, precision 6)
+  - `defaultZoom` (number)
+  - `mapType` (single line text, e.g. `google` or `leaflet`)
+3. Add a table named `Resources` with these fields:
+  - `externalId` (single line text)
+  - `citySlug` (single line text; must match a Cities `slug`)
+  - `category` (single select: `food`, `shelter`, `housing`, `legal`)
+  - `name` (single line text)
+  - `address` (single line text)
+  - `lat` (number, precision 6)
+  - `lng` (number, precision 6)
+  - `hours` (single line text)
+  - `daysOpen` (single line text)
+  - `phone` (single line text)
+  - `website` (url)
+  - `requiresId` (checkbox)
+  - `walkIn` (checkbox)
+  - `notes` (long text)
+
+Step 2: Create an API key
+
+1. In Airtable, go to Account > Developer hub > Personal access tokens.
+2. Create a token with `data.records:read` access to your base.
+
+Step 3: Configure environment variables
+
+Add these to `.env.local` (or your hosting provider settings):
+
+```
+USE_AIRTABLE=true
+AIRTABLE_API_KEY=your_token
+AIRTABLE_BASE_ID=appXXXXXXXXXXXXXX
+AIRTABLE_CITIES_TABLE=Cities
+AIRTABLE_RESOURCES_TABLE=Resources
+```
+
+Step 4: Restart the server
+
+Restart `npm run dev` (or your production deploy). The app will read from Airtable.
+
+Notes
+-----
+
+- Airtable mode is read-only in the app; use Airtable UI for edits.
+- To switch back to DB or JSON, set `USE_AIRTABLE=false` (and configure DB or remove DB envs for JSON mode).
