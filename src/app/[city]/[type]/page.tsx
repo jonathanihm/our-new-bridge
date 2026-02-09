@@ -7,6 +7,11 @@ import FoodPageClient from '../food/FoodPageClient'
 const CONFIG_DIR = join(process.cwd(), 'config', 'cities')
 
 const RESOURCE_TYPES: ResourceType[] = ['food', 'shelter', 'housing', 'legal']
+const SLUG_PATTERN = /^[a-z0-9-]{1,64}$/
+
+function isValidSlug(value: string) {
+  return SLUG_PATTERN.test(value)
+}
 
 function isResourceType(value: string): value is ResourceType {
   return (RESOURCE_TYPES as string[]).includes(value)
@@ -26,6 +31,7 @@ function defaultTitles(type: ResourceType) {
 }
 
 async function getCityConfigFromDisk(slug: string): Promise<any | null> {
+  if (!isValidSlug(slug)) return null
   try {
     const raw = await readFile(join(CONFIG_DIR, `${slug}.json`), 'utf-8')
     return JSON.parse(raw)
@@ -37,6 +43,7 @@ async function getCityConfigFromDisk(slug: string): Promise<any | null> {
 export default async function Page({ params }: { params: any }) {
   const { city, type } = await params
   if (!city) return redirect('/des-moines/food')
+  if (!isValidSlug(String(city))) return redirect('/des-moines/food')
 
   const requestedType = String(type || '')
   if (!isResourceType(requestedType)) {

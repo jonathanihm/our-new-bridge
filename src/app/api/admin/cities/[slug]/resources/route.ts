@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { deleteResource, getResourcesByCity, upsertResource } from '@/lib/db-utils'
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+import { checkAdminAuth } from '@/lib/admin-auth'
 
 type ResourceCategory = 'food' | 'shelter' | 'housing' | 'legal'
 
@@ -10,21 +9,19 @@ function normalizeCategory(value: unknown): ResourceCategory {
   return 'food'
 }
 
-function checkAuth(request: NextRequest) {
-  const auth = request.headers.get('authorization')
-  if (!auth || !auth.startsWith('Bearer ')) {
-    return false
-  }
-  const token = auth.slice(7)
-  return token === ADMIN_PASSWORD
-}
-
 export async function GET(
   request: NextRequest,
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
-  if (!checkAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    if (!checkAdminAuth(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
+      { status: 500 }
+    )
   }
 
   try {
@@ -70,8 +67,15 @@ export async function POST(
   request: NextRequest,
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
-  if (!checkAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    if (!checkAdminAuth(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
+      { status: 500 }
+    )
   }
 
   try {
@@ -117,8 +121,15 @@ export async function DELETE(
   request: NextRequest,
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
-  if (!checkAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    if (!checkAdminAuth(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Admin auth not configured' },
+      { status: 500 }
+    )
   }
 
   try {

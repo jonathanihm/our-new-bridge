@@ -61,9 +61,7 @@ export default function AdminLogin() {
         </form>
 
         <p className={styles.hint}>
-          Default password: <code>admin123</code>
-          <br />
-          Change it in .env using <code>ADMIN_PASSWORD</code>
+          Set <code>ADMIN_PASSWORD</code> in your environment to enable admin access.
         </p>
       </div>
     </div>

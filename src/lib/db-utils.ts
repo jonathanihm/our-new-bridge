@@ -9,6 +9,14 @@ export type ResourceType = 'food' | 'shelter' | 'housing' | 'legal'
 
 const RESOURCE_TYPES: ResourceType[] = ['food', 'shelter', 'housing', 'legal']
 
+const SLUG_PATTERN = /^[a-z0-9-]{1,64}$/
+
+function assertValidSlug(slug: string) {
+  if (!SLUG_PATTERN.test(slug)) {
+    throw new Error('Invalid city slug')
+  }
+}
+
 function getDatabaseUrlCandidate() {
   // Common names across hosts:
   // - Supabase/Neon/etc typically use DATABASE_URL
@@ -117,6 +125,7 @@ export async function getCities() {
 }
 
 export async function getCityBySlug(slug: string) {
+  assertValidSlug(slug)
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
     const city = await prismaClient.city.findUnique({
@@ -178,6 +187,7 @@ export async function createCity(data: {
   centerLat: number
   centerLng: number
 }) {
+  assertValidSlug(data.slug)
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
     return await prismaClient.city.create({ data })
@@ -207,6 +217,7 @@ export async function createCity(data: {
 }
 
 export async function deleteCity(slug: string) {
+  assertValidSlug(slug)
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
     return await prismaClient.city.delete({ where: { slug } })
@@ -340,6 +351,7 @@ export async function getResourcesByCity(slug: string) {
 }
 
 export async function getResourcesByCityAndType(slug: string, type: ResourceType) {
+  assertValidSlug(slug)
   if (USE_DATABASE) {
     const prismaClient = getPrismaClient()!
     return await prismaClient.resource.findMany({
@@ -376,6 +388,7 @@ export async function upsertResource(
     notes?: string | null
   }
 ) {
+  assertValidSlug(slug)
   const category: ResourceType = data.category ?? 'food'
 
   if (USE_DATABASE) {
@@ -480,6 +493,7 @@ export async function upsertResource(
 }
 
 export async function deleteResource(slug: string, id: string, category: ResourceType = 'food') {
+  assertValidSlug(slug)
   const normalizedId = String(id).trim()
 
   if (USE_DATABASE) {
