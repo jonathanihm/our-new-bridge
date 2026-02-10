@@ -64,7 +64,7 @@ jobs:
 
       - name: Deploy to Vercel
         run: |
-          npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} --scope="$VERCEL_ORG_ID" --project="$VERCEL_PROJECT_ID" \
+          npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} \
             --env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY" \
             --env RESEND_API_KEY="$RESEND_API_KEY" \
             --env ADMIN_EMAIL="$ADMIN_EMAIL" \
@@ -136,7 +136,7 @@ jobs:
 
       - name: Deploy to Vercel
         run: |
-          npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} --scope="$VERCEL_ORG_ID" --project="$VERCEL_PROJECT_ID" \
+          npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} \
             --env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY" \
             --env RESEND_API_KEY="$RESEND_API_KEY" \
             --env ADMIN_EMAIL="$ADMIN_EMAIL" \
