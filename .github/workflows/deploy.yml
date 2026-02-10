@@ -20,6 +20,8 @@ jobs:
       NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -62,7 +64,7 @@ jobs:
 
       - name: Deploy to Vercel
         run: |
-          npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} \
+          npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} \
             --env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY" \
             --env RESEND_API_KEY="$RESEND_API_KEY" \
             --env ADMIN_EMAIL="$ADMIN_EMAIL" \
@@ -90,6 +92,8 @@ jobs:
       NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -132,7 +136,7 @@ jobs:
 
       - name: Deploy to Vercel
         run: |
-          npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} \
+          npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} \
             --env NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY" \
             --env RESEND_API_KEY="$RESEND_API_KEY" \
             --env ADMIN_EMAIL="$ADMIN_EMAIL" \

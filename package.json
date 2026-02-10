@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "node scripts/prisma-generate.mjs && next build",
     "prisma:push": "dotenv -e .env.local -- prisma db push",
+    "prisma:schema": "dotenv -e .env.local -- node scripts/prisma-create-schema.mjs",
     "prisma:generate": "dotenv -e .env.local -- prisma generate",
     "migrate:json": "dotenv -e .env.local -- ts-node prisma/migrate-from-json.ts",
     "start": "next start",
