@@ -12,10 +12,18 @@ import type FoodMapProps from '../../../../components/FoodMapProps'
 import ReportIssueButton from '@/components/ReportIssueButton/ReportIssueButton'
 
 const googleFoodMapComponent = '../../../../components/FoodMap'
+const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet'
 
-// Change line below to use either google maps or leaflet map component
-const MapComponent = dynamic<FoodMapProps>(
+const GoogleMapComponent = dynamic<FoodMapProps>(
   () => import(googleFoodMapComponent).then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => <div className={styles.mapPlaceholder}>Loading map...</div>,
+  }
+)
+
+const LeafletMapComponent = dynamic<FoodMapProps>(
+  () => import(leafletFoodMapComponent).then((mod) => mod.default),
   {
     ssr: false,
     loading: () => <div className={styles.mapPlaceholder}>Loading map...</div>,
@@ -43,6 +51,11 @@ export default function FoodPageClient({
   pageTitle?: string
   listTitle?: string
 }) {
+  const shouldUseGoogle =
+    cityConfig.map?.type !== 'leaflet' &&
+    typeof cityConfig.map?.googleApiKey === 'string' &&
+    cityConfig.map.googleApiKey.trim().length > 0
+  const MapComponent = shouldUseGoogle ? GoogleMapComponent : LeafletMapComponent
   const normalizedType: ResourceType = resourceType || 'food'
   const router = useRouter()
 
