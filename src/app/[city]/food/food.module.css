@@ -82,6 +82,36 @@
   font-size: 0.9rem;
 }
 
+.signInButton {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 20px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.signInButton:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.suggestAddButton {
+  background: white;
+  color: var(--primary);
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.4);
+  transition: all 0.2s;
+}
+
+.suggestAddButton:hover {
+  background: rgba(255,255,255,0.85);
+}
+
 .mapContainer {
   height: 420px; /* ensure explicit height */
   width: 100%;
@@ -259,6 +289,32 @@
   background: #344e41;
 }
 
+.buttonRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.suggestButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #f4f1e8;
+  color: var(--primary);
+  border: 1px solid var(--border, #e8dcc4);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.suggestButton:hover {
+  background: #ebe4d7;
+}
+
 .resourceList {
   background: white;
   border-top: 2px solid var(--border);
@@ -307,6 +363,60 @@
   color: var(--text-light);
   margin-left: 1.5rem;
   margin-bottom: 0.5rem;
+}
+
+.listItemMeta {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-left: 1.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.availabilityPanel {
+  background: #f8f6f1;
+  border: 1px solid var(--border, #e8dcc4);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-top: 1rem;
+}
+
+.availabilityHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.availabilityStatus {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.availabilityMeta {
+  margin-top: 0.35rem;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.availabilityDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.availabilityDotYes {
+  background: #2d6a4f;
+}
+
+.availabilityDotNo {
+  background: #b23b3b;
+}
+
+.availabilityDotUnknown {
+  background: #9c6d38;
 }
 
 .badgeSmall {

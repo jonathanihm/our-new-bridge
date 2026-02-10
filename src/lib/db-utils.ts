@@ -48,6 +48,8 @@ type ResourceJson = {
   requiresId?: boolean
   walkIn?: boolean
   notes?: string | null
+  availabilityStatus?: 'yes' | 'no' | 'not_sure'
+  lastAvailableAt?: string | null
   category?: ResourceType
 }
 
@@ -218,6 +220,8 @@ type AirtableResourceFields = {
   requiresId?: boolean
   walkIn?: boolean
   notes?: string
+  availabilityStatus?: string
+  lastAvailableAt?: string
 }
 
 type GeocodeResult = { lat: number; lng: number }
@@ -332,6 +336,8 @@ async function fetchAirtableResourcesByCity(slug: string, type?: ResourceType) {
     requiresId: record.fields.requiresId || false,
     walkIn: record.fields.walkIn || false,
     notes: record.fields.notes || '',
+    availabilityStatus: record.fields.availabilityStatus || undefined,
+    lastAvailableAt: record.fields.lastAvailableAt || null,
     category: (record.fields.category || 'food') as ResourceType,
   }))
 }
@@ -722,6 +728,8 @@ export async function upsertResource(
     requiresId?: boolean
     walkIn?: boolean
     notes?: string | null
+    availabilityStatus?: 'yes' | 'no' | 'not_sure'
+    lastAvailableAt?: Date | string | null
   }
 ) {
   assertValidSlug(slug)
@@ -753,6 +761,49 @@ export async function upsertResource(
       throw new Error('City not found')
     }
 
+    const updateData = {
+      category: category as ResourceCategory,
+      name: data.name,
+      address: data.address,
+      lat: resolvedLat ?? null,
+      lng: resolvedLng ?? null,
+      hours: data.hours || null,
+      daysOpen: data.daysOpen || null,
+      phone: data.phone || null,
+      website: data.website || null,
+      requiresId: data.requiresId || false,
+      walkIn: data.walkIn || false,
+      notes: data.notes || null,
+      ...(data.availabilityStatus ? { availabilityStatus: data.availabilityStatus } : {}),
+      ...(data.lastAvailableAt
+        ? { lastAvailableAt: data.lastAvailableAt instanceof Date ? data.lastAvailableAt : new Date(data.lastAvailableAt) }
+        : {}),
+    }
+
+    const createData = {
+      externalId: resolvedId,
+      cityId: city.id,
+      category: category as ResourceCategory,
+      name: data.name,
+      address: data.address,
+      lat: resolvedLat ?? null,
+      lng: resolvedLng ?? null,
+      hours: data.hours || null,
+      daysOpen: data.daysOpen || null,
+      phone: data.phone || null,
+      website: data.website || null,
+      requiresId: data.requiresId || false,
+      walkIn: data.walkIn || false,
+      notes: data.notes || null,
+      availabilityStatus: data.availabilityStatus || null,
+      lastAvailableAt:
+        data.lastAvailableAt instanceof Date
+          ? data.lastAvailableAt
+          : data.lastAvailableAt
+            ? new Date(data.lastAvailableAt)
+            : null,
+    }
+
     return await prismaClient.resource.upsert({
       where: {
         cityId_category_externalId: {
@@ -761,36 +812,8 @@ export async function upsertResource(
           externalId: resolvedId,
         },
       },
-      update: {
-        category: category as ResourceCategory,
-        name: data.name,
-        address: data.address,
-        lat: resolvedLat ?? null,
-        lng: resolvedLng ?? null,
-        hours: data.hours || null,
-        daysOpen: data.daysOpen || null,
-        phone: data.phone || null,
-        website: data.website || null,
-        requiresId: data.requiresId || false,
-        walkIn: data.walkIn || false,
-        notes: data.notes || null,
-      },
-      create: {
-        externalId: resolvedId,
-        cityId: city.id,
-        category: category as ResourceCategory,
-        name: data.name,
-        address: data.address,
-        lat: resolvedLat ?? null,
-        lng: resolvedLng ?? null,
-        hours: data.hours || null,
-        daysOpen: data.daysOpen || null,
-        phone: data.phone || null,
-        website: data.website || null,
-        requiresId: data.requiresId || false,
-        walkIn: data.walkIn || false,
-        notes: data.notes || null,
-      },
+      update: updateData,
+      create: createData,
     })
   } else if (USE_AIRTABLE) {
     throw new Error(airtableWriteNotSupportedMessage())
@@ -810,11 +833,19 @@ export async function upsertResource(
     const normalizedId = resolvedId
     const idx = resources[category].findIndex((r) => String(r.id).trim() === normalizedId)
     
+    const { lastAvailableAt: rawLastAvailableAt, ...dataWithoutLastAvailableAt } = data
+    const normalizedLastAvailableAt =
+      rawLastAvailableAt instanceof Date
+        ? rawLastAvailableAt.toISOString()
+        : typeof rawLastAvailableAt === 'string'
+          ? rawLastAvailableAt
+          : undefined
+
     if (idx >= 0) {
       // Update existing resource - preserve all original fields and merge with new data
       resources[category][idx] = {
         ...resources[category][idx],
-        ...data,
+        ...dataWithoutLastAvailableAt,
         // Explicitly set these to ensure they match the expected types
         id: resolvedId,
         name: data.name,
@@ -823,10 +854,18 @@ export async function upsertResource(
           resolvedLat !== null && resolvedLat !== undefined ? resolvedLat : resources[category][idx].lat,
         lng:
           resolvedLng !== null && resolvedLng !== undefined ? resolvedLng : resources[category][idx].lng,
+        ...(normalizedLastAvailableAt ? { lastAvailableAt: normalizedLastAvailableAt } : {}),
       }
     } else {
       // Create new resource
-      resources[category].push({ ...data, id: resolvedId, lat: resolvedLat, lng: resolvedLng, category: undefined })
+      resources[category].push({
+        ...dataWithoutLastAvailableAt,
+        id: resolvedId,
+        lat: resolvedLat,
+        lng: resolvedLng,
+        category: undefined,
+        ...(normalizedLastAvailableAt ? { lastAvailableAt: normalizedLastAvailableAt } : {}),
+      })
     }
 
     try {
@@ -1012,6 +1051,12 @@ export async function exportData() {
             requiresId: dbResource.requiresId ?? existing.requiresId ?? false,
             walkIn: dbResource.walkIn ?? existing.walkIn ?? false,
             notes: dbResource.notes ?? existing.notes ?? '',
+            availabilityStatus:
+              (dbResource.availabilityStatus as ResourceJson['availabilityStatus'])
+              ?? existing.availabilityStatus,
+            lastAvailableAt: dbResource.lastAvailableAt
+              ? dbResource.lastAvailableAt.toISOString()
+              : existing.lastAvailableAt ?? null,
           })
         }
 
@@ -1033,6 +1078,8 @@ export async function exportData() {
             requiresId: r.requiresId ?? false,
             walkIn: r.walkIn ?? false,
             notes: r.notes ?? '',
+            availabilityStatus: (r.availabilityStatus as ResourceJson['availabilityStatus']) ?? undefined,
+            lastAvailableAt: r.lastAvailableAt ? r.lastAvailableAt.toISOString() : null,
           })
         }
 
@@ -1087,6 +1134,8 @@ export async function exportData() {
           requiresId: r.requiresId || false,
           walkIn: r.walkIn || false,
           notes: r.notes || '',
+          availabilityStatus: r.availabilityStatus as ResourceJson['availabilityStatus'],
+          lastAvailableAt: r.lastAvailableAt || null,
         }))
       }
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ArrowLeft, AlertCircle, Trash2 } from 'lucide-react'
 import styles from '../../admin.module.css'
@@ -19,6 +19,8 @@ interface Resource {
   requiresId: boolean
   walkIn: boolean
   notes: string
+  availabilityStatus?: 'yes' | 'no' | 'not_sure'
+  lastAvailableAt?: string | null
 }
 
 type PlaceSuggestion = {
@@ -44,6 +46,7 @@ export default function CityPage() {
     requiresId: false,
     walkIn: false,
     notes: '',
+    availabilityStatus: 'not_sure',
   })
   const [isSaving, setIsSaving] = useState(false)
   const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null)
@@ -51,9 +54,24 @@ export default function CityPage() {
   const [addressSuggestions, setAddressSuggestions] = useState<PlaceSuggestion[]>([])
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
   const [suppressSuggestions, setSuppressSuggestions] = useState(false)
+  const [lastSelectedAddress, setLastSelectedAddress] = useState('')
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
   const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return ''
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return ''
+    return parsed.toLocaleDateString()
+  }
+
+  const formatAvailability = (value?: Resource['availabilityStatus']) => {
+    if (!value) return ''
+    if (value === 'not_sure') return 'Not sure'
+    return value === 'yes' ? 'Yes' : 'No'
+  }
 
   const fetchResources = useCallback(async () => {
     try {
@@ -76,12 +94,19 @@ export default function CityPage() {
       router.push('/admin')
       return
     }
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !session) {
+      return
+    }
+    if (status === 'authenticated' && !isAdmin) {
+      signOut({ callbackUrl: '/admin' })
+      return
+    }
+    if (status === 'authenticated' && isAdmin) {
       fetchResources()
     }
-  }, [fetchResources, router, status])
+  }, [fetchResources, isAdmin, router, status])
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target
     const name = target.name
 
@@ -151,6 +176,10 @@ export default function CityPage() {
       return
     }
     const input = (formData.address || '').trim()
+    if (input && input === lastSelectedAddress) {
+      setAddressSuggestions([])
+      return
+    }
     if (!googleApiKey || input.length < 3) {
       setAddressSuggestions([])
       return
@@ -166,6 +195,7 @@ export default function CityPage() {
   const handleSelectSuggestion = async (suggestion: PlaceSuggestion) => {
     setAddressSuggestions([])
     setSuppressSuggestions(true)
+    setLastSelectedAddress(suggestion.description)
 
     if (!googleApiKey) {
       setFormData((prev) => ({
@@ -205,6 +235,7 @@ export default function CityPage() {
         lat: data.location?.latitude !== undefined ? String(data.location.latitude) : prev.lat,
         lng: data.location?.longitude !== undefined ? String(data.location.longitude) : prev.lng,
       }))
+      setLastSelectedAddress(data.formattedAddress || suggestion.description)
     } catch (error) {
       console.error(error)
       setFormData((prev) => ({
@@ -259,6 +290,7 @@ export default function CityPage() {
         requiresId: false,
         walkIn: false,
         notes: '',
+        availabilityStatus: 'not_sure',
       })
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to save resource')
@@ -270,6 +302,7 @@ export default function CityPage() {
   const handleEdit = (resource: Resource) => {
     setEditingId(resource.id || null)
     setFormData(resource)
+    setLastSelectedAddress(resource.address || '')
   }
 
   const handleCancel = () => {
@@ -286,7 +319,9 @@ export default function CityPage() {
       requiresId: false,
       walkIn: false,
       notes: '',
+      availabilityStatus: 'not_sure',
     })
+    setLastSelectedAddress('')
   }
 
   const handleDeleteResource = async () => {
@@ -463,6 +498,24 @@ export default function CityPage() {
             />
           </div>
 
+          <div className={styles.formGroup}>
+            <label htmlFor="availabilityStatus">Currently has resource?</label>
+            <select
+              id="availabilityStatus"
+              name="availabilityStatus"
+              value={formData.availabilityStatus || 'not_sure'}
+              onChange={handleFormChange}
+              className={styles.input}
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="not_sure">Not sure</option>
+            </select>
+            {formData.lastAvailableAt && (
+              <div className={styles.hint}>Last reported available: {formatDate(formData.lastAvailableAt)}</div>
+            )}
+          </div>
+
           <div className={styles.checkboxGroup}>
             <label>
               <input
@@ -542,6 +595,14 @@ export default function CityPage() {
               {resource.hours && <p className={styles.resourceDetail}>Hours: {resource.hours}</p>}
               {resource.daysOpen && <p className={styles.resourceDetail}>Days: {resource.daysOpen}</p>}
               {resource.phone && <p className={styles.resourceDetail}>Phone: {resource.phone}</p>}
+              {resource.availabilityStatus && (
+                <p className={styles.resourceDetail}>
+                  Availability: {formatAvailability(resource.availabilityStatus)}
+                </p>
+              )}
+              {resource.lastAvailableAt && (
+                <p className={styles.resourceDetail}>Last reported available: {formatDate(resource.lastAvailableAt)}</p>
+              )}
               {resource.requiresId && <span className={styles.badge}>ID Required</span>}
               {resource.walkIn && <span className={styles.badge}>Walk-ins Welcome</span>}
             </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import styles from '../admin.module.css'
@@ -21,7 +21,8 @@ export default function ValidatePage() {
   const [errors, setErrors] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
 
   const validate = useCallback(async () => {
     try {
@@ -47,10 +48,17 @@ export default function ValidatePage() {
       router.push('/admin')
       return
     }
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !session) {
+      return
+    }
+    if (status === 'authenticated' && !isAdmin) {
+      signOut({ callbackUrl: '/admin' })
+      return
+    }
+    if (status === 'authenticated' && isAdmin) {
       validate()
     }
-  }, [router, status, validate])
+  }, [isAdmin, router, status, validate])
 
   if (isLoading) {
     return (

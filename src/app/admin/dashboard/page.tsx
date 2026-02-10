@@ -21,7 +21,8 @@ export default function AdminDashboard() {
   const [cityToDelete, setCityToDelete] = useState<City | null>(null)
   const [isDeletingCity, setIsDeletingCity] = useState(false)
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
 
   const fetchCities = useCallback(async () => {
     try {
@@ -47,10 +48,17 @@ export default function AdminDashboard() {
       router.push('/admin')
       return
     }
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !session) {
+      return
+    }
+    if (status === 'authenticated' && !isAdmin) {
+      signOut({ callbackUrl: '/admin' })
+      return
+    }
+    if (status === 'authenticated' && isAdmin) {
       fetchCities()
     }
-  }, [fetchCities, router, status])
+  }, [fetchCities, isAdmin, router, status])
 
   const handleLogout = () => {
     signOut({ callbackUrl: '/admin' })
@@ -227,6 +235,13 @@ export default function AdminDashboard() {
       <div className={styles.section}>
         <h2>Tools</h2>
         <div className={styles.toolsList}>
+          <Link href="/admin/resource-updates" className={styles.toolButton}>
+            <CheckCircle size={18} />
+            <div>
+              <h3>Review Updates</h3>
+              <p>Approve or reject contributor submissions</p>
+            </div>
+          </Link>
           <Link href="/admin/validate" className={styles.toolButton}>
             <CheckCircle size={18} />
             <div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn, useSession } from 'next-auth/react'
+import { signIn, signOut, useSession } from 'next-auth/react'
 import { Lock, AlertCircle } from 'lucide-react'
 import styles from './admin.module.css'
 
@@ -11,13 +11,21 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      router.push('/admin/dashboard')
+    if (status !== 'authenticated') return
+    if (!session) return
+
+    if (isAdmin) {
+      router.replace('/admin/dashboard')
+      return
     }
-  }, [router, status])
+
+    setError('You are signed in but do not have admin access.')
+    signOut({ callbackUrl: '/admin' })
+  }, [isAdmin, router, session, status])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,16 +40,15 @@ export default function AdminLogin() {
 
     const result = await signIn('credentials', {
       password,
-      redirect: false,
+      redirect: true,
+      callbackUrl: '/admin/dashboard',
     })
 
-    if (result?.error) {
+    if (result?.error || result?.ok === false) {
       setError('Invalid password')
       setIsLoading(false)
       return
     }
-
-    router.push('/admin/dashboard')
   }
 
   return (

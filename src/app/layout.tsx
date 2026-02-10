@@ -1,6 +1,7 @@
 import './globals.css' //import globals.css
 import 'leaflet/dist/leaflet.css'
 import type { Metadata } from 'next'
+import AppSessionProvider from './SessionProvider'
 
 export const metadata: Metadata = {
   title: 'Our New Bridge',
@@ -14,7 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppSessionProvider>{children}</AppSessionProvider>
+      </body>
     </html>
   )
 }

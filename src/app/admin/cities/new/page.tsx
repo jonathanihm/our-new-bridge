@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import styles from '../../admin.module.css'
@@ -19,13 +19,21 @@ export default function NewCityPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/admin')
+      return
     }
-  }, [router, status])
+    if (status === 'authenticated' && !session) {
+      return
+    }
+    if (status === 'authenticated' && !isAdmin) {
+      signOut({ callbackUrl: '/admin' })
+    }
+  }, [isAdmin, router, status])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
