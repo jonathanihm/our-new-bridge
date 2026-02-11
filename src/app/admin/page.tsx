@@ -23,9 +23,14 @@ export default function AdminLogin() {
       return
     }
 
-    setError('You are signed in but do not have admin access.')
     signOut({ callbackUrl: '/admin' })
   }, [isAdmin, router, session, status])
+
+  const authError =
+    status === 'authenticated' && session && !isAdmin
+      ? 'You are signed in but do not have admin access.'
+      : ''
+  const errorMessage = error || authError
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,10 +78,10 @@ export default function AdminLogin() {
             />
           </div>
 
-          {error && (
+          {errorMessage && (
             <div className={styles.error}>
               <AlertCircle size={16} />
-              <span>{error}</span>
+              <span>{errorMessage}</span>
             </div>
           )}
 
