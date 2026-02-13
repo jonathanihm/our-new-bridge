@@ -9,6 +9,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model City {
@@ -25,6 +26,7 @@ model City {
   defaultZoom Int @default(12)
   
   resources Resource[]
+  resourceUpdateRequests ResourceUpdateRequest[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -34,6 +36,23 @@ enum ResourceCategory {
   shelter
   housing
   legal
+}
+
+enum ResourceUpdateStatus {
+  pending
+  approved
+  rejected
+}
+
+enum ResourceUpdateType {
+  add
+  update
+}
+
+enum AvailabilityStatus {
+  yes
+  no
+  not_sure
 }
 
 model Resource {
@@ -56,6 +75,8 @@ model Resource {
   requiresId Boolean @default(false)
   walkIn    Boolean @default(false)
   notes     String?
+  availabilityStatus AvailabilityStatus?
+  lastAvailableAt DateTime?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -63,4 +84,24 @@ model Resource {
   @@unique([cityId, category, externalId])
   @@index([cityId])
   @@index([cityId, category])
+}
+
+model ResourceUpdateRequest {
+  id                String               @id @default(cuid())
+  citySlug          String
+  city              City                 @relation(fields: [citySlug], references: [slug], onDelete: Cascade)
+  resourceExternalId String?
+  category          ResourceCategory     @default(food)
+  changeType        ResourceUpdateType
+  payload           Json
+  status            ResourceUpdateStatus @default(pending)
+  submittedByEmail  String
+  submittedByName   String?
+  submittedAt       DateTime             @default(now())
+  reviewedByEmail   String?
+  reviewedAt        DateTime?
+  reviewNote        String?
+
+  @@index([status, submittedAt])
+  @@index([citySlug])
 }

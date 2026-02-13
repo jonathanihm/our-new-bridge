@@ -36,6 +36,8 @@ export async function GET(
       requiresId?: boolean | null
       walkIn?: boolean | null
       notes?: string | null
+      availabilityStatus?: 'yes' | 'no' | 'not_sure' | null
+      lastAvailableAt?: Date | string | null
     }
 
     return NextResponse.json({
@@ -51,6 +53,10 @@ export async function GET(
         requiresId: r.requiresId || false,
         walkIn: r.walkIn || false,
         notes: r.notes || '',
+        availabilityStatus: r.availabilityStatus || null,
+        lastAvailableAt: r.lastAvailableAt
+          ? new Date(r.lastAvailableAt).toISOString()
+          : null,
       })),
     })
   } catch {
@@ -70,7 +76,20 @@ export async function POST(
   try {
       const { slug } = await Promise.resolve(ctx.params)
     const body = await request.json()
-    const { id, name, address, lat, lng, hours, daysOpen, phone, requiresId, walkIn, notes } = body
+    const {
+      id,
+      name,
+      address,
+      lat,
+      lng,
+      hours,
+      daysOpen,
+      phone,
+      requiresId,
+      walkIn,
+      notes,
+      availabilityStatus,
+    } = body
 
     if (!id || !name || !address) {
       return NextResponse.json(
@@ -82,6 +101,11 @@ export async function POST(
     // Convert string numbers to actual numbers
     const parsedLat = lat ? parseFloat(String(lat)) : null
     const parsedLng = lng ? parseFloat(String(lng)) : null
+
+    const normalizedAvailability =
+      availabilityStatus === 'yes' || availabilityStatus === 'no' || availabilityStatus === 'not_sure'
+        ? availabilityStatus
+        : undefined
 
     await upsertResource(slug, {
       id,
@@ -95,6 +119,8 @@ export async function POST(
       requiresId,
       walkIn,
       notes,
+      availabilityStatus: normalizedAvailability,
+      lastAvailableAt: normalizedAvailability === 'yes' ? new Date() : undefined,
     })
 
     return NextResponse.json({ success: true })

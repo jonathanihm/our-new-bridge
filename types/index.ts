@@ -87,6 +87,8 @@ export interface MapResource {
   notes?: string
   requiresId?: boolean
   walkIn?: boolean
+  availabilityStatus?: 'yes' | 'no' | 'not_sure' | null
+  lastAvailableAt?: string | null
 }
 
 export interface CityConfig {
@@ -126,6 +128,7 @@ export interface CityConfig {
     fullName?: string
     tagline?: string
     description?: string
+    timeZone?: string
   }
 }
 

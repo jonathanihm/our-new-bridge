@@ -58,6 +58,8 @@ type ResourceLike = {
   notes?: string | null
   requiresId?: boolean | null
   walkIn?: boolean | null
+  availabilityStatus?: 'yes' | 'no' | 'not_sure' | null
+  lastAvailableAt?: Date | string | null
 }
 
 async function getCityConfigFromDisk(slug: string): Promise<CityConfigFile | null> {
@@ -121,7 +123,7 @@ export default async function Page({ params }: { params: Promise<CityParams> }) 
   const resources: Partial<Record<ResourceType, MapResource[]>> = {
     [requestedType]: Array.isArray(rawResources)
       ? (rawResources as ResourceLike[]).map((r) => ({
-          id: r.id || r.externalId || '',
+          id: r.externalId || r.id || '',
           name: r.name || '',
           address: r.address || '',
           lat: r.lat,
@@ -133,6 +135,10 @@ export default async function Page({ params }: { params: Promise<CityParams> }) 
           notes: r.notes || '',
           requiresId: r.requiresId || false,
           walkIn: r.walkIn || false,
+          availabilityStatus: r.availabilityStatus || null,
+          lastAvailableAt: r.lastAvailableAt
+            ? new Date(r.lastAvailableAt).toISOString()
+            : null,
         }))
       : [],
   }
