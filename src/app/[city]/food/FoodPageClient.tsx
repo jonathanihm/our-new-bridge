@@ -3,14 +3,25 @@
 // Client wrapper: render the full food page UI using server-provided props
 import { useState } from 'react'
 import Link from 'next/link'
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Badge,
+  Link as ChakraLink,
+  Container,
+} from '@chakra-ui/react'
 import { MapPin, Clock, Phone, Info, Navigation, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
-import { signIn, useSession } from 'next-auth/react'
-import styles from './food.module.css'
+import { useSession } from 'next-auth/react'
 import type { CityConfig, MapResource, ResourceType } from '../../../../types'
 import type FoodMapProps from '../../../../components/FoodMapProps'
 import ReportIssueButton from '@/components/ReportIssueButton/ReportIssueButton'
+import NavigationMenu from '@/components/NavigationMenu/NavigationMenu'
 
 const googleFoodMapComponent = '../../../../components/FoodMap'
 const leafletFoodMapComponent = '../../../../components/FoodMapLeaflet'
@@ -19,7 +30,7 @@ const GoogleMapComponent = dynamic<FoodMapProps>(
   () => import(googleFoodMapComponent).then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => <div className={styles.mapPlaceholder}>Loading map...</div>,
+    loading: () => <div className="absolute inset-0 bg-gradient-to-b from-[#c8d5b9] to-[#a3b18a] flex items-center justify-center text-xl text-[var(--primary)]">Loading map...</div>,
   }
 )
 
@@ -27,7 +38,7 @@ const LeafletMapComponent = dynamic<FoodMapProps>(
   () => import(leafletFoodMapComponent).then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => <div className={styles.mapPlaceholder}>Loading map...</div>,
+    loading: () => <div className="absolute inset-0 bg-gradient-to-b from-[#c8d5b9] to-[#a3b18a] flex items-center justify-center text-xl text-[var(--primary)]">Loading map...</div>,
   }
 )
 
@@ -58,7 +69,6 @@ export default function FoodPageClient({
     cityConfig.map.googleApiKey.trim().length > 0
   const MapComponent = shouldUseGoogle ? GoogleMapComponent : LeafletMapComponent
   const normalizedType: ResourceType = resourceType || 'food'
-  const router = useRouter()
   const { status } = useSession()
   const canSuggestUpdates = status === 'authenticated'
 
@@ -117,54 +127,23 @@ export default function FoodPageClient({
   }
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Link href="/" className={styles.navLink}>
-            Home
-          </Link>
-          <Link href="/about" className={styles.navLink}>
-            About
-          </Link>
-        </div>
+    <div suppressHydrationWarning>
+      <Box minH="100vh" display="flex" flexDirection="column">
+        <NavigationMenu
+          pageTitle={pageTitle}
+          currentPage="city"
+          currentCitySlug={slug}
+          cities={cities}
+          addLocationUrl={canSuggestUpdates ? buildSuggestUrl() : undefined}
+          resourceType={normalizedType}
+        />
 
-        <h1>{pageTitle}</h1>
-
-        <div className={styles.headerRight}>
-          <select
-            className={styles.citySelect}
-            value={slug}
-            aria-label="Select city"
-            onChange={(e) => {
-              const nextSlug = e.target.value
-              router.push(`/${nextSlug}/${normalizedType}`)
-            }}
-          >
-            {(cities || []).map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <div className={styles.resourceCount}>{resourceList.length} locations</div>
-          {!canSuggestUpdates && (
-            <button
-              type="button"
-              className={styles.signInButton}
-              onClick={() => signIn('google')}
-            >
-              Sign in to contribute
-            </button>
-          )}
-          {canSuggestUpdates && (
-            <Link href={buildSuggestUrl()} className={styles.suggestAddButton}>
-              Add Location
-            </Link>
-          )}
-        </div>
-      </header>
-
-      <div className={styles.mapContainer} style={{ height: 420 }}>
+      <Box 
+        h={{ base: '350px', sm: '400px', md: '420px' }}
+        w="full"
+        bg="transparent"
+        position="relative"
+      >
         <MapComponent
           resources={resourceList}
           selectedResource={selectedResource}
@@ -173,123 +152,241 @@ export default function FoodPageClient({
         />
 
         {selectedResource && (
-          <div className={styles.cardOverlay} onClick={() => setSelectedResource(null)}>
-            <div className={styles.resourceCard} onClick={(e) => e.stopPropagation()}>
-              <button className={styles.closeCard} onClick={() => setSelectedResource(null)} aria-label="Close">
+          <Box
+            position="fixed"
+            inset={0}
+            bg="blackAlpha.500"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            p={4}
+            zIndex={10000}
+            onClick={() => setSelectedResource(null)}
+          >
+            <Box
+              bg="white"
+              borderRadius="xl"
+              p={{ base: 6, md: 8 }}
+              maxW="lg"
+              w="full"
+              maxH="90vh"
+              overflowY="auto"
+              boxShadow="2xl"
+              position="relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                position="absolute"
+                top={4}
+                right={4}
+                bg="var(--surface)"
+                borderRadius="full"
+                w={8}
+                h={8}
+                minW={8}
+                p={0}
+                color="var(--primary)"
+                _hover={{ bg: 'var(--border)' }}
+                onClick={() => setSelectedResource(null)}
+                aria-label="Close"
+              >
                 <X size={20} />
-              </button>
+              </Button>
 
-              <h2>{selectedResource.name}</h2>
+              <Heading
+                as="h2"
+                fontSize={{ base: '2xl', md: '3xl' }}
+                color="var(--primary)"
+                mb={6}
+                pr={8}
+              >
+                {selectedResource.name}
+              </Heading>
 
-              <div className={styles.cardSection}>
-                <MapPin size={18} />
-                <span>{selectedResource.address}</span>
-              </div>
+              <Flex gap={4} mb={5} color="var(--text)" alignItems="flex-start">
+                <MapPin size={18} style={{ flexShrink: 0, color: 'var(--secondary)', marginTop: '2px' }} />
+                <Text>{selectedResource.address}</Text>
+              </Flex>
 
-              <div className={styles.cardSection}>
-                <Clock size={18} />
-                <div>
-                  <strong>{selectedResource.hours}</strong>
-                  <p className={styles.daysOpen}>{selectedResource.daysOpen}</p>
-                </div>
-              </div>
+              <Flex gap={4} mb={5} color="var(--text)" alignItems="flex-start">
+                <Clock size={18} style={{ flexShrink: 0, color: 'var(--secondary)', marginTop: '2px' }} />
+                <Box>
+                  <Text as="strong" display="block" mb={1}>{selectedResource.hours}</Text>
+                  <Text fontSize="sm" color="var(--text-light)" mt={1}>{selectedResource.daysOpen}</Text>
+                </Box>
+              </Flex>
 
               {selectedResource.phone && (
-                <div className={styles.cardSection}>
-                  <Phone size={18} />
-                  <a href={`tel:${selectedResource.phone}`}>{selectedResource.phone}</a>
-                </div>
+                <Flex gap={4} mb={5} color="var(--text)" alignItems="flex-start">
+                  <Phone size={18} style={{ flexShrink: 0, color: 'var(--secondary)', marginTop: '2px' }} />
+                  <a href={`tel:${selectedResource.phone}`} style={{ color: 'var(--primary)' }}>{selectedResource.phone}</a>
+                </Flex>
               )}
 
-              <div className={styles.requirements}>
-                <div className={`${styles.badge} ${!selectedResource.requiresId ? styles.badgeGreen : styles.badgeYellow}`}>
+              <Flex gap={3} flexWrap="wrap" my={6}>
+                <Badge
+                  px={4}
+                  py={2}
+                  borderRadius="full"
+                  fontSize="sm"
+                  fontWeight="medium"
+                  bg={!selectedResource.requiresId ? 'var(--success)' : 'var(--warning)'}
+                  color={!selectedResource.requiresId ? 'var(--success-text)' : 'var(--warning-text)'}
+                >
                   {selectedResource.requiresId ? 'ID Required' : 'No ID Required'}
-                </div>
+                </Badge>
                 {selectedResource.walkIn && (
-                  <div className={`${styles.badge} ${styles.badgeGreen}`}>Walk-ins Welcome</div>
+                  <Badge
+                    px={4}
+                    py={2}
+                    borderRadius="full"
+                    fontSize="sm"
+                    fontWeight="medium"
+                    bg="var(--success)"
+                    color="var(--success-text)"
+                  >
+                    Walk-ins Welcome
+                  </Badge>
                 )}
-              </div>
+              </Flex>
 
               {selectedResource.notes && (
-                <div className={styles.notes}>
-                  <Info size={18} />
-                  <span>{selectedResource.notes}</span>
-                </div>
+                <Flex bg="#f8f6f1" p={4} borderRadius="lg" mt={4} fontSize="sm" color="#444" gap={4} alignItems="flex-start">
+                  <Info size={18} style={{ flexShrink: 0, color: 'var(--secondary)' }} />
+                  <Text>{selectedResource.notes}</Text>
+                </Flex>
               )}
 
               {(selectedResource.availabilityStatus || selectedResource.lastAvailableAt) && (
-                <div className={styles.availabilityPanel}>
-                  <div className={styles.availabilityHeader}>
-                    <span
-                      className={`${styles.availabilityDot} ${
+                <Box bg="#f8f6f1" border="1px" borderColor="var(--border)" borderRadius="lg" p={3.5} mt={4}>
+                  <Flex alignItems="center" gap={2.5} fontWeight="semibold" color="var(--primary)">
+                    <Box
+                      w="2.5"
+                      h="2.5"
+                      borderRadius="full"
+                      bg={
                         selectedResource.availabilityStatus === 'yes'
-                          ? styles.availabilityDotYes
+                          ? '#2d6a4f'
                           : selectedResource.availabilityStatus === 'no'
-                            ? styles.availabilityDotNo
-                            : styles.availabilityDotUnknown
-                      }`}
+                            ? '#b23b3b'
+                            : '#9c6d38'
+                      }
                       aria-hidden="true"
                     />
-                    <strong>Availability</strong>
+                    <Text as="strong">Availability</Text>
                     {selectedResource.availabilityStatus && (
-                      <span className={styles.availabilityStatus}>
+                      <Text ml="auto" fontWeight="bold" color="var(--text)">
                         {formatAvailability(selectedResource.availabilityStatus)}
-                      </span>
+                      </Text>
                     )}
-                  </div>
+                  </Flex>
                   {selectedResource.lastAvailableAt && (
-                    <div className={styles.availabilityMeta}>
+                    <Text mt={1.5} color="var(--text-light)" fontSize="sm">
                       Last reported available: {formatDateTime(selectedResource.lastAvailableAt)}
-                    </div>
+                    </Text>
                   )}
-                </div>
+                </Box>
               )}
 
-              <div className={styles.buttonRow}>
-                <button 
-                  className={styles.directionsButton}
-                  onClick={() => handleGetDirections(selectedResource)}
+              <Flex flexDirection={{ base: 'column', sm: 'row' }} gap={3} mt={6}>
+                <Button
+                  flex={1}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  gap={3}
+                  bg="var(--primary)"
+                  color="white"
+                  px={4}
+                  py={2.5}
+                  borderRadius="lg"
+                  fontSize="base"
+                  _hover={{ bg: '#344e41' }}
+                  onClick={() => selectedResource && handleGetDirections(selectedResource)}
                 >
                   <Navigation size={18} />
                   Get Directions
-                </button>
-                {canSuggestUpdates && (
-                  <Link href={buildSuggestUrl(selectedResource)} className={styles.suggestButton}>
-                    Suggest Update
+                </Button>
+                {canSuggestUpdates && selectedResource && (
+                  <Link href={buildSuggestUrl(selectedResource)}>
+                    <Button
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      gap={2}
+                      bg="#f4f1e8"
+                      color="var(--primary)"
+                      border="1px"
+                      borderColor="var(--border)"
+                      px={4}
+                      py={2.5}
+                      borderRadius="lg"
+                      fontWeight="semibold"
+                      _hover={{ bg: '#ebe4d7' }}
+                    >
+                      Suggest Update
+                    </Button>
                   </Link>
                 )}
-                <ReportIssueButton resource={selectedResource} compact={true} />
-              </div>
-            </div>
-          </div>
+                {selectedResource && <ReportIssueButton resource={selectedResource} compact={true} />}
+              </Flex>
+            </Box>
+          </Box>
         )}
-      </div>
+      </Box>
 
-      <div className={styles.resourceList}>
-        <h3>{listTitle}</h3>
-        {resourceList.map((resource) => (
-          <div
-            key={resource.id}
-            className={`${styles.listItem} ${selectedResource?.id === resource.id ? styles.listItemSelected : ''}`}
-            onClick={() => setSelectedResource(resource)}
-          >
-            <div className={styles.listItemHeader}>
-              <MapPin size={16} />
-              <strong>{resource.name}</strong>
-            </div>
-            <div className={styles.listItemHours}>{resource.hours || ''}</div>
-            {resource.lastAvailableAt && (
-              <div className={styles.listItemMeta}>Last reported available: {formatDateTime(resource.lastAvailableAt)}</div>
-            )}
-            {resource.availabilityStatus && (
-              <div className={styles.listItemMeta}>Availability: {formatAvailability(resource.availabilityStatus)}</div>
-            )}
-            {!resource.requiresId && resource.requiresId !== undefined && (
-              <div className={`${styles.badgeSmall} ${styles.badgeGreen}`}>No ID Required</div>
-            )}
-          </div>
-        ))}
-      </div>
+      <Box bg="white" borderTop="2px" borderColor="var(--border)" p={6} maxH={{ base: '250px', md: '300px' }} overflowY="auto">
+        <Heading as="h3" fontSize="xl" color="var(--primary)" mb={4}>{listTitle}</Heading>
+        <VStack gap={0} alignItems="stretch">
+          {resourceList.map((resource) => (
+            <Box
+              key={resource.id}
+              p={4}
+              borderBottom="1px"
+              borderColor="var(--surface)"
+              cursor="pointer"
+              transition="colors 0.2s"
+              _hover={{ bg: 'var(--background)' }}
+              bg={selectedResource?.id === resource.id ? 'var(--surface)' : 'transparent'}
+              borderLeft={selectedResource?.id === resource.id ? '3px' : '0'}
+              borderLeftColor={selectedResource?.id === resource.id ? 'var(--primary)' : 'transparent'}
+              pl={selectedResource?.id === resource.id ? 'calc(1rem - 3px)' : 4}
+              onClick={() => setSelectedResource(resource)}
+            >
+              <Flex alignItems="center" gap={2} mb={2} color="var(--primary)">
+                <MapPin size={16} style={{ flexShrink: 0 }} />
+                <Text as="strong">{resource.name}</Text>
+              </Flex>
+              <Text fontSize="sm" color="var(--text-light)" ml={6} mb={2}>{resource.hours || ''}</Text>
+              {resource.lastAvailableAt && (
+                <Text fontSize="xs" color="var(--text-light)" ml={6} mb={1.5}>
+                  Last reported available: {formatDateTime(resource.lastAvailableAt)}
+                </Text>
+              )}
+              {resource.availabilityStatus && (
+                <Text fontSize="xs" color="var(--text-light)" ml={6} mb={1.5}>
+                  Availability: {formatAvailability(resource.availabilityStatus)}
+                </Text>
+              )}
+              {!resource.requiresId && resource.requiresId !== undefined && (
+                <Badge
+                  display="inline-block"
+                  px={3}
+                  py={1}
+                  borderRadius="2xl"
+                  fontSize="xs"
+                  ml={6}
+                  bg="var(--success)"
+                  color="var(--success-text)"
+                >
+                  No ID Required
+                </Badge>
+              )}
+            </Box>
+          ))}
+        </VStack>
+      </Box>
+    </Box>
     </div>
   )
 }

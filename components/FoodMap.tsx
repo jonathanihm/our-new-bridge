@@ -7,6 +7,14 @@ import FoodMapProps from './FoodMapProps'
 
 const containerStyle = { width: '100%', height: '100%' }
 
+const mapOptions: google.maps.MapOptions = {
+  gestureHandling: 'greedy', // Better mobile touch support - allows one-finger pan/zoom
+  zoomControl: true,
+  mapTypeControl: false,
+  streetViewControl: false,
+  fullscreenControl: true,
+}
+
 export default function FoodMap({ resources, selectedResource, onSelectResource, cityConfig }: FoodMapProps) {
   const apiKey = cityConfig.map.googleApiKey
   if (!apiKey) throw new Error('Google Maps API key is not defined in the configuration.')
@@ -44,13 +52,14 @@ export default function FoodMap({ resources, selectedResource, onSelectResource,
     onSelectResource(resource)
   }, [onSelectResource])
 
-  if (loadError) return <div style={{ height: '100%' }}>Map failed to load</div>
-  if (!isLoaded) return <div style={{ height: '100%' }}>Loading map...</div>
+  if (loadError) return <div className="h-full flex items-center justify-center text-[var(--primary)]">Map failed to load</div>
+  if (!isLoaded) return <div className="h-full flex items-center justify-center text-[var(--primary)]">Loading map...</div>
 
   return (
     <GoogleMap
       mapContainerStyle={containerStyle}
       onLoad={onMapLoad}
+      options={mapOptions}
       // do NOT pass `center` or `zoom` as props (uncontrolled) — prevents re-centering on subsequent renders
     >
       {resources.map((r) => (
@@ -66,11 +75,11 @@ export default function FoodMap({ resources, selectedResource, onSelectResource,
           position={{ lat: Number(activeResource.lat), lng: Number(activeResource.lng) }}
           onCloseClick={() => onSelectResource(null)}
         >
-          <div style={{ minWidth: 200 }}>
-            <strong style={{ color: '#1a73e8' }}>{activeResource.name}</strong>
-            <p style={{ margin: '0.25rem 0' }}>{activeResource.hours}</p>
+          <div className="min-w-[200px]">
+            <strong className="text-[#1a73e8]">{activeResource.name}</strong>
+            <p className="my-1">{activeResource.hours}</p>
             {!activeResource.requiresId && (
-              <span style={{ background: '#e6f4ea', color: '#1b5e20', padding: '0.2rem 0.5rem', borderRadius: 10 }}>
+              <span className="bg-[#e6f4ea] text-[#1b5e20] px-2 py-1 rounded-xl text-xs inline-block">
                 No ID Required
               </span>
             )}
