@@ -57,7 +57,7 @@ export default function CityPage() {
   const [lastSelectedAddress, setLastSelectedAddress] = useState('')
   const router = useRouter()
   const { data: session, status } = useSession()
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = session?.user?.isAdmin === true
   const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   const formatDate = (value?: string | null) => {

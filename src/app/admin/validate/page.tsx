@@ -22,7 +22,7 @@ export default function ValidatePage() {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { data: session, status } = useSession()
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = session?.user?.isAdmin === true
 
   const validate = useCallback(async () => {
     try {

@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { getPrismaClient, USE_DATABASE } from '@/lib/db-utils'
+import { canReviewResourceUpdate, getAdminAccessForSessionUser } from '@/lib/permissions'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -25,12 +27,28 @@ export async function GET() {
   }
 
   try {
+    const allowedCitySlugs = Array.from(new Set([
+      ...access.citySlugs,
+      ...access.locationScopes.map((scope) => scope.citySlug),
+    ]))
+
+    if (!access.isSuperAdmin && allowedCitySlugs.length === 0) {
+      return NextResponse.json([])
+    }
+
     const updates = await prismaClient.resourceUpdateRequest.findMany({
-      where: { status: 'pending' },
+      where: {
+        status: 'pending',
+        ...(access.isSuperAdmin ? {} : { citySlug: { in: allowedCitySlugs } }),
+      },
       orderBy: { submittedAt: 'desc' },
     })
 
-    return NextResponse.json(updates)
+    const filteredUpdates = updates.filter((update) =>
+      canReviewResourceUpdate(access, update.citySlug, update.resourceExternalId)
+    )
+
+    return NextResponse.json(filteredUpdates)
   } catch (error) {
     console.error('Failed to load resource updates:', error)
     return NextResponse.json(

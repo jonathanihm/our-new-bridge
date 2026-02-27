@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { deleteResource, getResourcesByCity, upsertResource } from '@/lib/db-utils'
 import { authOptions } from '@/lib/auth'
+import { canManageCity, canManageLocation, getAdminAccessForSessionUser } from '@/lib/permissions'
 
 type ResourceCategory = 'food' | 'shelter' | 'housing' | 'legal'
 
@@ -15,12 +16,25 @@ export async function GET(
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
       const { slug } = await Promise.resolve(ctx.params)
+    const normalizedSlug = slug.toLowerCase()
+    const canManageWholeCity = canManageCity(access, normalizedSlug)
+    const allowedLocationIds = new Set(
+      access.locationScopes
+        .filter((scope) => scope.citySlug === normalizedSlug)
+        .map((scope) => scope.locationId)
+    )
+
+    if (!canManageWholeCity && !access.isSuperAdmin && allowedLocationIds.size === 0) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const resources = await getResourcesByCity(slug)
 
     type ResourceLike = {
@@ -40,8 +54,7 @@ export async function GET(
       lastAvailableAt?: Date | string | null
     }
 
-    return NextResponse.json({
-      food: (resources as ResourceLike[]).map((r) => ({
+    const mappedResources = (resources as ResourceLike[]).map((r) => ({
         id: r.externalId || r.id,
         name: r.name,
         address: r.address,
@@ -57,8 +70,16 @@ export async function GET(
         lastAvailableAt: r.lastAvailableAt
           ? new Date(r.lastAvailableAt).toISOString()
           : null,
-      })),
-    })
+      }))
+
+    const filteredResources = canManageWholeCity || access.isSuperAdmin
+      ? mappedResources
+      : mappedResources.filter((resource) => {
+        const resourceId = resource.id ? String(resource.id) : ''
+        return allowedLocationIds.has(resourceId)
+      })
+
+    return NextResponse.json({ food: filteredResources })
   } catch {
     return NextResponse.json({ food: [] })
   }
@@ -69,7 +90,8 @@ export async function POST(
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -90,6 +112,17 @@ export async function POST(
       notes,
       availabilityStatus,
     } = body
+
+    const normalizedSlug = String(slug).toLowerCase()
+    const resourceId = id ? String(id) : ''
+
+    if (resourceId) {
+      if (!canManageLocation(access, normalizedSlug, resourceId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (!canManageCity(access, normalizedSlug)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     if (!id || !name || !address) {
       return NextResponse.json(
@@ -137,7 +170,8 @@ export async function DELETE(
     ctx: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -148,6 +182,10 @@ export async function DELETE(
 
     if (!id) {
       return NextResponse.json({ error: 'Missing required field: id' }, { status: 400 })
+    }
+
+    if (!canManageLocation(access, String(slug).toLowerCase(), String(id))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     await deleteResource(String(slug), String(id), normalizeCategory(category))

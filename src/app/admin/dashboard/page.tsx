@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { Plus, Eye, Download, LogOut, AlertCircle, CheckCircle, Trash2 } from 'lucide-react'
+import { Plus, Eye, Download, LogOut, AlertCircle, CheckCircle, Trash2, Shield } from 'lucide-react'
 import styles from '../admin.module.css'
 
 interface City {
@@ -22,7 +22,8 @@ export default function AdminDashboard() {
   const [isDeletingCity, setIsDeletingCity] = useState(false)
   const router = useRouter()
   const { data: session, status } = useSession()
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = session?.user?.isAdmin === true
+  const isSuperAdmin = session?.user?.isSuperAdmin === true
 
   const fetchCities = useCallback(async () => {
     try {
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
     if (status === 'authenticated' && isAdmin) {
       fetchCities()
     }
-  }, [fetchCities, isAdmin, router, status])
+  }, [fetchCities, isAdmin, router, session, status])
 
   const handleLogout = () => {
     signOut({ callbackUrl: '/admin' })
@@ -235,6 +236,15 @@ export default function AdminDashboard() {
       <div className={styles.section}>
         <h2>Tools</h2>
         <div className={styles.toolsList}>
+          {isSuperAdmin && (
+            <Link href="/admin/users" className={styles.toolButton}>
+              <Shield size={18} />
+              <div>
+                <h3>Manage Permissions</h3>
+                <p>Assign super, city, and local admin access</p>
+              </div>
+            </Link>
+          )}
           <Link href="/admin/resource-updates" className={styles.toolButton}>
             <CheckCircle size={18} />
             <div>

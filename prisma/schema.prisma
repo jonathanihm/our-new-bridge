@@ -27,6 +27,7 @@ model City {
   
   resources Resource[]
   resourceUpdateRequests ResourceUpdateRequest[]
+  adminRoleAssignments AdminRoleAssignment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -53,6 +54,18 @@ enum AvailabilityStatus {
   yes
   no
   not_sure
+}
+
+enum AdminRole {
+  super_admin
+  city_admin
+  local_admin
+}
+
+enum AdminScopeType {
+  global
+  city
+  location
 }
 
 model Resource {
@@ -104,4 +117,37 @@ model ResourceUpdateRequest {
 
   @@index([status, submittedAt])
   @@index([citySlug])
+}
+
+model AdminRoleAssignment {
+  id          String         @id @default(cuid())
+  userEmail   String
+  role        AdminRole
+  scopeType   AdminScopeType @default(global)
+  citySlug    String?
+  city        City?          @relation(fields: [citySlug], references: [slug], onDelete: Cascade)
+  locationId  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userEmail])
+  @@index([userEmail, role])
+  @@index([citySlug])
+  @@index([citySlug, locationId])
+  @@unique([userEmail, role, scopeType, citySlug, locationId])
+}
+
+model OAuthUser {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String?
+  image             String?
+  provider          String
+  providerAccountId String?
+  firstSignInAt     DateTime @default(now())
+  lastSignInAt      DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([provider])
 }

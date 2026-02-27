@@ -209,6 +209,38 @@
   cursor: not-allowed;
 }
 
+.googleButton {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background: white;
+  color: var(--text);
+  border: 1px solid var(--border, #e8dcc4);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+.googleButton:hover:not(:disabled) {
+  background: var(--surface, #f4f1e8);
+}
+
+.googleButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loginDivider {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-light, #666);
+  text-align: center;
+}
+
 .cancelButton {
   padding: 0.875rem 1.5rem;
   background: transparent;

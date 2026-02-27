@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { getCities, createCity, deleteCity } from '@/lib/db-utils'
 import { authOptions } from '@/lib/auth'
+import { getAdminAccessForSessionUser } from '@/lib/permissions'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -20,8 +22,18 @@ export async function GET() {
       resources?: unknown[]
     }
 
+    const scopedCities = access.isSuperAdmin
+      ? (cities as CityLike[])
+      : (cities as CityLike[]).filter((city) => {
+        const allowedCitySlugs = new Set([
+          ...access.citySlugs,
+          ...access.locationScopes.map((scope) => scope.citySlug),
+        ])
+        return allowedCitySlugs.has(city.slug.toLowerCase())
+      })
+
     return NextResponse.json(
-      (cities as CityLike[]).map((c) => ({
+      scopedCities.map((c) => ({
         slug: c.slug,
         name: c.name,
         state: c.state || '',
@@ -40,8 +52,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!access.isSuperAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   try {
@@ -74,8 +90,12 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!access.isSuperAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   try {

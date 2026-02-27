@@ -31,7 +31,7 @@ export default function ResourceUpdatesPage() {
   const [actionState, setActionState] = useState<ActionState | null>(null)
   const router = useRouter()
   const { data: session, status } = useSession()
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = session?.user?.isAdmin === true
 
   const fetchUpdates = useCallback(async () => {
     try {

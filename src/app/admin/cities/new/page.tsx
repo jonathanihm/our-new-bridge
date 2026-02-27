@@ -20,7 +20,7 @@ export default function NewCityPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { data: session, status } = useSession()
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = session?.user?.isAdmin === true
 
   useEffect(() => {
     if (status === 'unauthenticated') {

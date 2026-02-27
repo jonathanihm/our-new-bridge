@@ -9,10 +9,11 @@ import styles from './admin.module.css'
 export default function AdminLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const router = useRouter()
   const { data: session, status } = useSession()
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = session?.user?.isAdmin === true
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -35,11 +36,11 @@ export default function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setIsLoading(true)
+    setIsPasswordLoading(true)
 
     if (!password) {
       setError('Please enter a password')
-      setIsLoading(false)
+      setIsPasswordLoading(false)
       return
     }
 
@@ -51,8 +52,23 @@ export default function AdminLogin() {
 
     if (result?.error || result?.ok === false) {
       setError('Invalid password')
-      setIsLoading(false)
+      setIsPasswordLoading(false)
       return
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    setError('')
+    setIsGoogleLoading(true)
+
+    const result = await signIn('google', {
+      callbackUrl: '/admin/dashboard',
+      redirect: true,
+    })
+
+    if (result?.error || result?.ok === false) {
+      setError('Google sign-in failed')
+      setIsGoogleLoading(false)
     }
   }
 
@@ -64,6 +80,19 @@ export default function AdminLogin() {
           <h1>Admin Dashboard</h1>
         </div>
 
+        <>
+          <button
+            type="button"
+            className={styles.googleButton}
+            onClick={handleGoogleSignIn}
+            disabled={isGoogleLoading || isPasswordLoading}
+          >
+            {isGoogleLoading ? 'Redirecting to Google...' : 'Sign in with Google'}
+          </button>
+          <p className={styles.hint}>Use your assigned Google account for role-based admin access.</p>
+          <div className={styles.loginDivider}>or use admin password</div>
+        </>
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGroup}>
             <label htmlFor="password">Password</label>
@@ -73,7 +102,7 @@ export default function AdminLogin() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter admin password"
-              disabled={isLoading}
+              disabled={isPasswordLoading || isGoogleLoading}
               autoFocus
             />
           </div>
@@ -85,8 +114,8 @@ export default function AdminLogin() {
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className={styles.submitButton}>
-            {isLoading ? 'Logging in...' : 'Login'}
+          <button type="submit" disabled={isPasswordLoading || isGoogleLoading} className={styles.submitButton}>
+            {isPasswordLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 

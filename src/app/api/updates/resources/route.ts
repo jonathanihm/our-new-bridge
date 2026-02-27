@@ -24,7 +24,7 @@ type ResourceUpdatePayload = {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  const isAdmin = session?.user?.name === 'admin'
+  const isAdmin = session?.user?.isAdmin === true
   const submittedByEmail = session?.user?.email || (isAdmin ? 'admin' : '')
 
   if (!submittedByEmail) {

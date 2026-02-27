@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { getPrismaClient, USE_DATABASE, upsertResource, type ResourceType } from '@/lib/db-utils'
+import { canReviewResourceUpdate, getAdminAccessForSessionUser } from '@/lib/permissions'
 
 export async function PATCH(
   request: NextRequest,
   ctx: { params: { id: string } | Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
-  if (session?.user?.name !== 'admin') {
+  const access = await getAdminAccessForSessionUser(session?.user)
+  if (!access.isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -44,11 +46,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Update request not found' }, { status: 404 })
     }
 
+    if (!canReviewResourceUpdate(access, updateRequest.citySlug, updateRequest.resourceExternalId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     if (updateRequest.status !== 'pending') {
       return NextResponse.json({ error: 'Update request already processed' }, { status: 400 })
     }
 
-    const reviewerEmail = session?.user?.email || 'admin'
+    const reviewerEmail = session?.user?.email || 'system'
 
     if (action === 'approve') {
       const payload = updateRequest.payload as Record<string, unknown>
