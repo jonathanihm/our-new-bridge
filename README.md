@@ -2,6 +2,8 @@ This is an open source project to allow for quickly creating new help networks i
 
 Our New Bridge can easily be run and managed as a standalone project for you, or you can create a new city/area for the main project and simply add the data.
 
+https://ournewbridge.org/
+
 Getting started
 ---------------
 
