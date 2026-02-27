@@ -36,8 +36,15 @@ export default function FoodMapLeaflet({ resources, onSelectResource, cityConfig
   if (!cityConfig.map) throw new Error('cityConfig.map is required for Leaflet map')
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
-      <MapContainer style={containerStyle} center={center} zoom={zoom} scrollWheelZoom={true}>
+    <div className="w-full h-full touch-pan-x touch-pan-y">
+      <MapContainer 
+        style={containerStyle} 
+        center={center} 
+        zoom={zoom} 
+        scrollWheelZoom={true}
+        touchZoom={true}
+        dragging={true}
+      >
         <FitBounds resources={resources} center={center} zoom={zoom} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
@@ -57,11 +64,11 @@ export default function FoodMapLeaflet({ resources, onSelectResource, cityConfig
               eventHandlers={{ click: () => onSelectResource(r) }}
             >
               <Popup>
-                <div style={{ minWidth: 180 }}>
-                  <strong style={{ color: '#1a73e8' }}>{r.name}</strong>
-                  <p style={{ margin: '0.25rem 0' }}>{r.hours}</p>
+                <div className="min-w-[180px]">
+                  <strong className="text-[#1a73e8]">{r.name}</strong>
+                  <p className="my-1">{r.hours}</p>
                   {!r.requiresId && (
-                    <span style={{ background: '#e6f4ea', color: '#1b5e20', padding: '0.2rem 0.5rem', borderRadius: 10 }}>
+                    <span className="bg-[#e6f4ea] text-[#1b5e20] px-2 py-1 rounded-xl text-xs inline-block">
                       No ID Required
                     </span>
                   )}

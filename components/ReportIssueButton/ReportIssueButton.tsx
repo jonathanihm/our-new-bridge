@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Flag } from 'lucide-react'
 import ReportIssueModal from '../ReportIssueModal/ReportIssueModal'
 import type { MapResource } from '@/types'
-import styles from './ReportIssueButton.module.css'
 
 interface ReportIssueButtonProps {
   resource: MapResource
@@ -18,7 +17,11 @@ export default function ReportIssueButton({ resource, compact = false }: ReportI
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className={compact ? styles.compactButton : styles.button}
+        className={
+          compact
+            ? 'flex items-center justify-center bg-transparent border border-[var(--border)] text-[var(--text-light)] p-2 rounded-md cursor-pointer transition-all hover:bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--primary)] w-10 h-10'
+            : 'flex items-center gap-2 bg-transparent border border-[var(--border)] text-[var(--text-light)] px-4 py-2 rounded-md text-sm cursor-pointer transition-all hover:bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--primary)]'
+        }
         aria-label="Report an issue with this location"
       >
         <Flag size={compact ? 16 : 18} />

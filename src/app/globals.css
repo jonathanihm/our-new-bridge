@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap');
-@import "tailwindcss";
 
 * {
   margin: 0;
@@ -27,6 +26,17 @@ body {
   background: var(--background);
   color: var(--text);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent iOS zoom on input focus */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 768px) {
+  button, a, [role="button"] {
+    min-height: 44px; /* iOS recommended touch target size */
+  }
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -58,4 +68,21 @@ a:hover {
 
 .leaflet-popup-content {
   margin: 0.75rem;
+}
+
+/* Animations for modal */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
